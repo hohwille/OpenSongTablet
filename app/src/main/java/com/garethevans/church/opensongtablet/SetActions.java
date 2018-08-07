@@ -2,6 +2,7 @@ package com.garethevans.church.opensongtablet;
 
 import android.app.Activity;
 import android.content.Context;
+import android.support.v4.provider.DocumentFile;
 import android.util.Base64;
 import android.util.Log;
 
@@ -9,12 +10,12 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.text.Collator;
 import java.util.ArrayList;
+import java.util.Collections;
 
 public class SetActions extends Activity {
 
@@ -25,14 +26,84 @@ public class SetActions extends Activity {
 
     public static MyInterface mListener;
 
-    private static boolean encodedimage;
-    static String title = "", author = "", lyrics = "", hymn_number = "";
-    private static String custom_notes, user1 = "", user2 = "", user3 = "", aka = "", key_line = "";
-    private static XmlPullParser xpp;
+    private boolean encodedimage;
+    String title = "", author = "", lyrics = "", hymn_number = "";
+    private String custom_notes, user1 = "", user2 = "", user3 = "", aka = "", key_line = "";
+    private XmlPullParser xpp;
 
-    static void updateOptionListSets() {
+    StorageAccess storageAccess;
+
+    ArrayList<String> listFoundSetsInCategory(Context c, DocumentFile homeFolder, String category) {
+        // Find all of the sets in the Sets folder
+        storageAccess = new StorageAccess();
+        DocumentFile dirsets = storageAccess.tryCreateDirectory(c,homeFolder,"Sets","");
+        DocumentFile[] foundSets = dirsets.listFiles();
+        ArrayList<String> sets = new ArrayList<>();
+        // Go through each file and add them to the return ArrayList if they match the category
+        for (DocumentFile found:foundSets) {
+            if (found!=null && found.exists() && found.isFile() &&
+                    (category==null||category.equals("")||found.getName().contains(category))) {
+                sets.add(found.getName());
+            }
+        }
+        // Sort the list
+        Collator coll = Collator.getInstance(FullscreenActivity.locale);
+        coll.setStrength(Collator.SECONDARY);
+        Collections.sort(sets, coll);
+        if (!FullscreenActivity.sortAlphabetically) {
+            Collections.reverse(sets);
+        }
+        return sets;
+    }
+
+    ArrayList<String> listCategoriesOfFoundSets(Context c, DocumentFile homeFolder) {
+        // Find all of the sets in the Sets folder
+        storageAccess = new StorageAccess();
+        DocumentFile dirsets = storageAccess.tryCreateDirectory(c,homeFolder,"Sets","");
+        DocumentFile[] foundSets = dirsets.listFiles();
+        ArrayList<String> setcats = new ArrayList<>();
+
+        String main = c.getString(R.string.mainfoldername);
+
+        // Go through each file and add set categories found (only add new ones)
+        for (DocumentFile found:foundSets) {
+            if (found!=null && found.exists() && found.isFile() && found.getName()!=null) {
+                String name = found.getName();
+
+                // If no specific category, we will add it to main - but we'll add to the start of the
+                // ArrayList after sorting
+                if (!name.contains("__")) {
+                    name = main + "__" + name;
+                }
+
+                // Now split the name into category and name
+                String[] bits = name.split("__");
+
+                // Now add it to the returned array if it isn't already found
+                if (bits.length>0 && !setcats.contains(bits[0]) && !bits[0].equals(main)) {
+                    setcats.add(bits[0]);
+                }
+            }
+        }
+
+        // Sort the categories alphabetically using locale
+        Collator coll = Collator.getInstance(FullscreenActivity.locale);
+        coll.setStrength(Collator.SECONDARY);
+        Collections.sort(setcats, coll);
+
+        // Add the main category to the start of this list
+        setcats.add(0,FullscreenActivity.mainfoldername);
+
+        return setcats;
+    }
+
+
+    // TODO will remove the one below as I'm now using the one above!
+    void updateOptionListSets(Context c, DocumentFile homeFolder) {
         // Load up the songs in the Sets folder
-        File[] tempmyFiles = FullscreenActivity.dirsets.listFiles();
+        storageAccess = new StorageAccess();
+        DocumentFile dirsets = storageAccess.tryCreateDirectory(c,homeFolder,"Sets","");
+        DocumentFile[] tempmyFiles = dirsets.listFiles();
         // Go through this list and check if the item is a directory or a file.
         // Add these to the correct array
         int tempnumfiles = 0;
@@ -52,9 +123,7 @@ public class SetActions extends Activity {
 
         // Now set the size of the arrays
         FullscreenActivity.mySetsFileNames = new String[numactualfiles];
-        FullscreenActivity.mySetsFiles = new File[numactualfiles];
         FullscreenActivity.mySetsFolderNames = new String[numactualdirs];
-        FullscreenActivity.mySetsDirectories = new File[numactualdirs];
 
         // Go back through these items and add them to the file names
         // whichset is an integer that goes through the mySetsFileNames array
@@ -65,11 +134,9 @@ public class SetActions extends Activity {
         for (int x = 0; x < tempnumfiles; x++) {
             if (tempmyFiles[x].isFile()) {
                 FullscreenActivity.mySetsFileNames[whichset] = tempmyFiles[x].getName();
-                FullscreenActivity.mySetsFiles[whichset] = tempmyFiles[x];
                 whichset++;
             } else if (tempmyFiles[x].isDirectory()) {
                 FullscreenActivity.mySetsFolderNames[whichsetfolder] = tempmyFiles[x].getName();
-                FullscreenActivity.mySetsDirectories[whichsetfolder] = tempmyFiles[x];
                 whichsetfolder++;
             }
         }
@@ -80,7 +147,7 @@ public class SetActions extends Activity {
         // The above line isn't needed anymore
     }
 
-    static void prepareSetList() {
+    void prepareSetList() {
         try {
             FullscreenActivity.mSet = null;
             FullscreenActivity.mSetList = null;
@@ -112,7 +179,7 @@ public class SetActions extends Activity {
         }
     }
 
-    static void loadASet(Context c) throws XmlPullParserException, IOException {
+    void loadASet(Context c, DocumentFile homeFolder) throws XmlPullParserException, IOException {
 
         FullscreenActivity.mySetXML = null;
         FullscreenActivity.mySetXML = "";
@@ -123,7 +190,9 @@ public class SetActions extends Activity {
         FullscreenActivity.mySet = "";
 
         // Test if file exists - the settoload is the link clicked so is still the set name
-        FullscreenActivity.setfile = new File(FullscreenActivity.dirsets + "/" + FullscreenActivity.settoload);
+        storageAccess = new StorageAccess();
+        FullscreenActivity.setfile = storageAccess.getFileLocationAsDocumentFile(c, homeFolder,"Sets","",
+                FullscreenActivity.settoload);
         if (!FullscreenActivity.setfile.exists()) {
             return;
         }
@@ -132,13 +201,13 @@ public class SetActions extends Activity {
 
         // Try the new, improved method of loading in a set
         // First up, try to get the encoding of the set file
-        String utf = LoadXML.getUTFEncoding(FullscreenActivity.setfile, c);
+        String utf = storageAccess.getUTFEncoding(c, homeFolder,"Sets", "", FullscreenActivity.settoload);
 
         // Now we know the encoding, iterate through the file extracting the items as we go
         XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
         factory.setNamespaceAware(true);
         xpp = factory.newPullParser();
-        InputStream inputStream = new FileInputStream(FullscreenActivity.setfile);
+        InputStream inputStream = storageAccess.getInputStreamFromUri(c, FullscreenActivity.setfile.getUri());
         xpp.setInput(inputStream, utf);
 
         int eventType;
@@ -156,15 +225,15 @@ public class SetActions extends Activity {
                                 break;
                             case "scripture":
                                 // Get Scripture
-                                getScripture(c);
+                                getScripture(c,homeFolder);
                                 break;
                             case "custom":
                                 // Get Custom (Note or slide or variation)
-                                getCustom(c);
+                                getCustom(c,homeFolder);
                                 break;
                             case "image":
                                 // Get the Image(s)
-                                getImage(c);
+                                getImage(c, homeFolder);
                                 break;
                         }
                     }
@@ -180,7 +249,7 @@ public class SetActions extends Activity {
         Preferences.savePreferences();
     }
 
-    static void indexSongInSet() {
+    void indexSongInSet() {
         // See if we are already there!
         boolean alreadythere = false;
         if (FullscreenActivity.indexSongInSet>-1 && FullscreenActivity.mSetList!=null &&
@@ -238,7 +307,7 @@ public class SetActions extends Activity {
         }
     }
 
-    static void songIndexClickInSet() {
+    void songIndexClickInSet() {
         if (FullscreenActivity.indexSongInSet == 0) {
             // Already first item
             FullscreenActivity.previousSongInSet = "";
@@ -255,10 +324,13 @@ public class SetActions extends Activity {
         FullscreenActivity.whichDirection = "R2L";
     }
 
-    static void saveSetMessage(Context c) {
+    void saveSetMessage(Context c) {
+        storageAccess = new StorageAccess();
+        DocumentFile homeFolder = storageAccess.getHomeFolder(c);
         FullscreenActivity.whattodo = "";
         if (FullscreenActivity.mSetList!=null && FullscreenActivity.mSetList.length>0) {
-            if (!CreateNewSet.doCreation(c)) {
+            CreateNewSet createNewSet = new CreateNewSet();
+            if (!createNewSet.doCreation(c,homeFolder)) {
                 Log.d("d","Problem creating new set");
             }
         }
@@ -271,7 +343,7 @@ public class SetActions extends Activity {
         }
     }
 
-    static void clearSet(Context c) {
+    void clearSet(Context c) {
         FullscreenActivity.mySet = "";
         FullscreenActivity.mSetList = null;
         FullscreenActivity.setView = false;
@@ -285,24 +357,29 @@ public class SetActions extends Activity {
                 c.getString(R.string.ok);
     }
 
-    static void deleteSet(Context c) {
+    void deleteSet(Context c, DocumentFile homeFolder) {
         String[] tempsets = FullscreenActivity.setnamechosen.split("%_%");
         FullscreenActivity.myToastMessage = "";
+        StringBuilder sb = new StringBuilder();
         for (String tempfile:tempsets) {
             if (tempfile!=null && !tempfile.equals("") && !tempfile.isEmpty()) {
-                File settodelete = new File(FullscreenActivity.dirsets + "/" + tempfile);
+                storageAccess = new StorageAccess();
+                DocumentFile settodelete = storageAccess.getFileLocationAsDocumentFile(c,homeFolder,
+                        "Sets","", tempfile);
                 if (settodelete.delete()) {
-                    FullscreenActivity.myToastMessage = FullscreenActivity.myToastMessage + tempfile + ", ";
+                    sb.append(tempfile);
+                    sb.append(", ");
                 }
             }
         }
+        FullscreenActivity.myToastMessage = sb.toString();
         if (FullscreenActivity.myToastMessage.length()>2) {
             FullscreenActivity.myToastMessage = FullscreenActivity.myToastMessage.substring(0, FullscreenActivity.myToastMessage.length() - 2);
         }
         FullscreenActivity.myToastMessage = FullscreenActivity.myToastMessage + " " + c.getString(R.string.sethasbeendeleted);
     }
 
-    static void getSongForSetWork(Context c) {
+    void getSongForSetWork(Context c) {
         if (FullscreenActivity.whichSongFolder.equals(FullscreenActivity.mainfoldername)) {
             FullscreenActivity.whatsongforsetwork = FullscreenActivity.songfilename;
         } else if (FullscreenActivity.whichSongFolder.equals("../Scripture/_cache")) {
@@ -321,7 +398,7 @@ public class SetActions extends Activity {
         }
     }
 
-    static boolean isSongInSet(Context c) {
+    boolean isSongInSet(Context c) {
         if (FullscreenActivity.setSize > 0) {
             // Get the name of the song to look for (including folders if need be)
             getSongForSetWork(c);
@@ -371,130 +448,46 @@ public class SetActions extends Activity {
         return false;
     }
 
-    static void checkDirectories() {
-        // Check the Scripture _cache Directory exists
-        boolean check_action;
-        if (FullscreenActivity.dirscriptureverses.exists()) {
-            // Scripture folder exists, do nothing other than clear it!
-            for (File scripfile : FullscreenActivity.dirscriptureverses.listFiles()) {
-                check_action = scripfile.delete();
-                if (!check_action) {
-                    Log.d("d","Problem clearing scripture file");
-                }
-            }
-        } else {
-            // Tell the user we're creating the Scripture _cache directory
-            check_action = FullscreenActivity.dirscriptureverses.mkdirs();
-            if (!check_action) {
-                Log.d("d","Problem creating scripture folder");
-            }
-        }
-
-        // Check the Slides _cache Directory exists
-        if (FullscreenActivity.dircustomslides.exists()) {
-            // Slides folder exists, do nothing other than clear it!
-            for (File slidesfile : FullscreenActivity.dircustomslides.listFiles()) {
-                check_action = slidesfile.delete();
-                if (!check_action) {
-                    Log.d("d","Problem clearing custom slides file");
-                }
-            }
-        } else {
-            // Tell the user we're creating the Slides _cache directory
-            check_action = FullscreenActivity.dircustomslides.mkdirs();
-            if (!check_action) {
-                Log.d("d","Problem creating custom slides folder");
-            }
-        }
-
-        // Check the Notes _cache Directory exists
-        if (FullscreenActivity.dircustomnotes.exists()) {
-            // Slides folder exists, do nothing other than clear it!
-            for (File notesfile : FullscreenActivity.dircustomnotes.listFiles()) {
-                check_action = notesfile.delete();
-                if (!check_action) {
-                    Log.d("d","Problem clearing custom notes file");
-                }
-            }
-        } else {
-            // Tell the user we're creating the Notes _cache directory
-            check_action = FullscreenActivity.dircustomnotes.mkdirs();
-            if (!check_action) {
-                Log.d("d","Problem creating custom notes folder");
-            }
-        }
-
-        // Check the Images _cache Directory exists
-        if (FullscreenActivity.dircustomimages.exists()) {
-            // Images folder exists, do nothing other than clear it!
-            for (File imagesfile : FullscreenActivity.dircustomimages.listFiles()) {
-                check_action = imagesfile.delete();
-                if (!check_action) {
-                    Log.d("d","Problem clearing image file");
-                }
-            }
-        } else {
-            // Tell the user we're creating the Slides _cache directory
-            check_action = FullscreenActivity.dircustomimages.mkdirs();
-            if (!check_action) {
-                Log.d("d","Problem creating custom image folder");
-            }
-        }
-
-        // Check the Variations Directory exists
-        if (FullscreenActivity.dirvariations.exists()) {
-            // Variations folder exists, do nothing other than clear it!
-            for (File variationsfile : FullscreenActivity.dirvariations.listFiles()) {
-                check_action = variationsfile.delete();
-                if (!check_action) {
-                    Log.d("d","Problem clearing variation file");
-                }
-            }
-        } else {
-            // Tell the user we're creating the Variations directory
-            check_action = FullscreenActivity.dirvariations.mkdirs();
-            if (!check_action) {
-                Log.d("d","Problem creating variation folder");
-            }
-        }
-
+    void checkDirectories(Context c, DocumentFile homeFolder) {
+        // Check the Directories that need to exist do
+        storageAccess = new StorageAccess();
+        storageAccess.checkRootFoldersExist(c,homeFolder);
+        storageAccess.clearCacheFolders(c, homeFolder);
     }
 
-    private static void writeTempSlide(String where, String what, Context c) throws IOException {
+    private void writeTempSlide(Context c, DocumentFile homeFolder, String where, String what) throws IOException {
         // Fix the custom name so there are no illegal characters
         what = what.replaceAll("[|?*<\":>+\\[\\]']", " ");
-        File temp;
+        DocumentFile temp;
         String set_item;
         String foldername;
         String setprefix;
 
+        storageAccess = new StorageAccess();
+
         if (where.equals(c.getResources().getString(R.string.scripture))) {
-            foldername = FullscreenActivity.dirscriptureverses.toString();
+            foldername = "Scripture/_cache";
             setprefix  = "$**_**" + c.getResources().getString(R.string.scripture) + "/";
         } else if (where.equals(c.getResources().getString(R.string.slide))) {
-            foldername = FullscreenActivity.dircustomslides.toString();
+            foldername = "Slides/_cache";
             setprefix  = "$**_**" + c.getResources().getString(R.string.slide) + "/";
         } else if (where.equals(c.getResources().getString(R.string.image))) {
-            foldername = FullscreenActivity.dircustomimages.toString();
+            foldername = "Images/_cache";
             setprefix  = "$**_**" + c.getResources().getString(R.string.image) + "/";
         } else if (where.equals(c.getResources().getString(R.string.variation))) {
-            foldername = FullscreenActivity.dirvariations.toString();
+            foldername = "Variations";
             setprefix  = "$**_**" + c.getResources().getString(R.string.variation) + "/";
         } else {
-            foldername = FullscreenActivity.dircustomnotes.toString();
+            foldername = "Notes/_cache";
             setprefix  = "$**_**" + c.getResources().getString(R.string.note) + "/";
         }
 
         // Check to see if that file already exists (same name).  If so, add _ to the end
-        temp = new File(foldername + "/" + what);
-        while (temp.exists()) {
-            what += "_";
-            temp = new File(foldername + "/" + what);
-        }
+        temp = storageAccess.getFileLocationAsDocumentFile(c, homeFolder,"",foldername,what);
 
         set_item = setprefix + what + "_**$";
 
-        FileOutputStream overWrite = new FileOutputStream(temp, false);
+        OutputStream overWrite = storageAccess.getOutputStreamFromUri(c, temp.getUri());
         // Prepare the new XML file
         String my_NEW_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
         my_NEW_XML += "<song>\n";
@@ -515,17 +508,16 @@ public class SetActions extends Activity {
             my_NEW_XML = new String(data, "UTF-8");
         }
 
-        overWrite.write(my_NEW_XML.getBytes());
-        overWrite.flush();
-        overWrite.close();
+        storageAccess.writeBytes(c,overWrite,my_NEW_XML.getBytes());
         FullscreenActivity.mySet = FullscreenActivity.mySet + set_item;
     }
 
-    private static void getSong() {
+    private void getSong() {
         try {
             // Get path and remove leading /
-            String p_name = LoadXML.parseFromHTMLEntities(xpp.getAttributeValue(null,"path"));
-            String s_name = LoadXML.parseFromHTMLEntities(xpp.getAttributeValue(null,"name"));
+            LoadXML loadXML = new LoadXML();
+            String p_name = loadXML.parseFromHTMLEntities(xpp.getAttributeValue(null,"path"));
+            String s_name = loadXML.parseFromHTMLEntities(xpp.getAttributeValue(null,"name"));
             if (p_name.startsWith("/")) {
                 p_name = p_name.replaceFirst("/","");
             }
@@ -559,14 +551,14 @@ public class SetActions extends Activity {
 
     }
 
-    private static void getScripture(Context c) throws IOException, XmlPullParserException {
+    private void getScripture(Context c, DocumentFile homeFolder) throws IOException, XmlPullParserException {
         // Ok parse this bit seperately.  Initialise the values
         String scripture_title = "";
         String scripture_translation = "";
-        String scripture_text = "";
+        StringBuilder scripture_text = new StringBuilder();
         String scripture_seconds = xpp.getAttributeValue(null, "seconds");
         String scripture_loop = xpp.getAttributeValue(null, "loop");
-
+        LoadXML loadXML = new LoadXML();
         boolean scripture_finished = false;
         while (!scripture_finished) {
             switch (xpp.getName()) {
@@ -574,10 +566,10 @@ public class SetActions extends Activity {
                     scripture_title = xpp.nextText();
                     break;
                 case "body":
-                    scripture_text = scripture_text + "\n[]\n" + LoadXML.parseFromHTMLEntities(xpp.nextText());
+                    scripture_text.append("\n[]\n").append(loadXML.parseFromHTMLEntities(xpp.nextText()));
                     break;
                 case "subtitle":
-                    scripture_translation = LoadXML.parseFromHTMLEntities(xpp.nextText());
+                    scripture_translation = loadXML.parseFromHTMLEntities(xpp.nextText());
                     break;
             }
 
@@ -595,42 +587,42 @@ public class SetActions extends Activity {
         // Break the scripture_text up into small manageable chunks
         // First up, start each new verse on a new line
         //Replace all spaces (split points) with \n
-        scripture_text = scripture_text.replace(" ", "\n");
-        scripture_text = scripture_text.replace("---", "[]");
+        scripture_text = new StringBuilder(scripture_text.toString().replace(" ", "\n"));
+        scripture_text = new StringBuilder(scripture_text.toString().replace("---", "[]"));
         //Split the verses up into an array by new lines - array of words
-        String[] temp_text = scripture_text.split("\n");
+        String[] temp_text = scripture_text.toString().split("\n");
 
         //String[] add_text = new String[800];
         //int array_line = 0;
 
         //Add all the array back together and make sure no line goes above 40 characters
         ArrayList<String> vlines = new ArrayList<>();
-        String currline = "";
+        StringBuilder currline = new StringBuilder();
         for (String words : temp_text) {
             int check = currline.length();
             if (check>40 || words.contains("[]")) {
                 if (words.contains("[]")) {
                     // This is a new section
-                    vlines.add(currline);
+                    vlines.add(currline.toString());
                     vlines.add("[]\n");
-                    currline = "";
+                    currline = new StringBuilder();
                 } else {
-                    vlines.add(currline);
-                    currline = " " + words;
+                    vlines.add(currline.toString());
+                    currline = new StringBuilder(" " + words);
                 }
             } else {
-                currline = currline + " " + words;
+                currline.append(" ").append(words);
             }
         }
-        vlines.add(currline);
+        vlines.add(currline.toString());
 
-        scripture_text = "";
+        scripture_text = new StringBuilder();
 
         // Ok go back through the array and add the non-empty lines back up
         for (int i=0; i<vlines.size();i++) {
             String s = vlines.get(i);
             if (s != null && !s.equals("")) {
-                scripture_text = scripture_text + "\n" + s;
+                scripture_text.append("\n").append(s);
             }
         }
 
@@ -666,8 +658,8 @@ public class SetActions extends Activity {
         }*/
 
 
-        while (scripture_text.contains("\\n\\n")) {
-            scripture_text = scripture_text.replace("\\n\\n", "\\n");
+        while (scripture_text.toString().contains("\\n\\n")) {
+            scripture_text = new StringBuilder(scripture_text.toString().replace("\\n\\n", "\\n"));
         }
 
         title = scripture_title;
@@ -675,42 +667,43 @@ public class SetActions extends Activity {
         user1 = scripture_seconds;
         user2 = scripture_loop;
         user3 = "";
-        lyrics = scripture_text.trim();
+        lyrics = scripture_text.toString().trim();
         aka = "";
         key_line = "";
         hymn_number = "";
 
-        writeTempSlide(c.getResources().getString(R.string.scripture), scripture_title,c);
+        writeTempSlide(c, homeFolder, c.getResources().getString(R.string.scripture), scripture_title);
 
         xpp.nextTag();
      }
 
-    private static void getCustom(Context c) throws IOException, XmlPullParserException {
+    private void getCustom(Context c, DocumentFile homeFolder) throws IOException, XmlPullParserException {
         // Ok parse this bit seperately.  Could be a note or a slide or a variation
         // Notes have # Note # - in the name
         // Variations have # Variation # - in the name
-        String custom_name = LoadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "name"));
-        String custom_seconds = LoadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "seconds"));
-        String custom_loop = LoadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "loop"));
+        LoadXML loadXML = new LoadXML();
+        String custom_name = loadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "name"));
+        String custom_seconds = loadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "seconds"));
+        String custom_loop = loadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "loop"));
         String custom_title = "";
         String custom_subtitle = "";
         custom_notes = "";
-        String custom_text = "";
+        StringBuilder custom_text = new StringBuilder();
 
         boolean custom_finished = false;
         while (!custom_finished) {
             switch (xpp.getName()) {
                 case "title":
-                    custom_title = LoadXML.parseFromHTMLEntities(xpp.nextText());
+                    custom_title = loadXML.parseFromHTMLEntities(xpp.nextText());
                     break;
                 case "notes":
-                    custom_notes = LoadXML.parseFromHTMLEntities(xpp.nextText());
+                    custom_notes = loadXML.parseFromHTMLEntities(xpp.nextText());
                     break;
                 case "body":
-                    custom_text = custom_text + "\n---\n" + LoadXML.parseFromHTMLEntities(xpp.nextText());
+                    custom_text.append("\n---\n").append(loadXML.parseFromHTMLEntities(xpp.nextText()));
                     break;
                 case "subtitle":
-                    custom_subtitle = LoadXML.parseFromHTMLEntities(xpp.nextText());
+                    custom_subtitle = loadXML.parseFromHTMLEntities(xpp.nextText());
                     break;
             }
 
@@ -725,7 +718,7 @@ public class SetActions extends Activity {
 
         // Remove first ---
         if (custom_text.indexOf("\n---\n") == 0) {
-            custom_text = custom_text.replaceFirst("\n---\n", "");
+            custom_text = new StringBuilder(custom_text.toString().replaceFirst("\n---\n", ""));
         }
 
         // If the custom slide is just a note (no content), fix the content
@@ -733,9 +726,9 @@ public class SetActions extends Activity {
         if (custom_name.contains("# " + c.getResources().getString(R.string.note) + " # - ")) {
             // Prepare for a note
             custom_name = custom_name.replace("# " + c.getResources().getString(R.string.note) + " # - ", "");
-            custom_text = custom_notes;
+            custom_text = new StringBuilder(custom_notes);
             if (custom_notes.equals("")) {
-                custom_text = custom_name;
+                custom_text = new StringBuilder(custom_name);
             }
             custom_notes = "";
             custom_title = "";
@@ -748,7 +741,7 @@ public class SetActions extends Activity {
         } else if (custom_name.contains("# " + c.getResources().getString(R.string.variation) + " # - ")) {
             // Prepare for a variation
             custom_name = custom_name.replace("# " + c.getResources().getString(R.string.variation) + " # - ", "");
-            custom_text = custom_notes;
+            custom_text = new StringBuilder(custom_notes);
             custom_title = custom_name;
             custom_subtitle = "";
             custom_seconds = "";
@@ -762,25 +755,27 @@ public class SetActions extends Activity {
         user3 = "";
         aka = custom_name;
         key_line = custom_notes;
-        lyrics = custom_text;
+        lyrics = custom_text.toString();
         hymn_number = "";
 
-        writeTempSlide(noteorslide, custom_name,c);
+        writeTempSlide(c, homeFolder, noteorslide, custom_name);
 
     }
 
-    private static void getImage(Context c) throws IOException, XmlPullParserException {
+    private void getImage(Context c, DocumentFile homeFolder) throws IOException, XmlPullParserException {
         // Ok parse this bit separately.  This could have multiple images
-        String image_name = LoadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "name"));
-        String image_seconds = LoadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "seconds"));
-        String image_loop = LoadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "loop"));
+        storageAccess = new StorageAccess();
+        LoadXML loadXML = new LoadXML();
+        String image_name = loadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "name"));
+        String image_seconds = loadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "seconds"));
+        String image_loop = loadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "loop"));
         String image_title = "";
         String image_subtitle = "";
-        String slide_images;
-        String slide_image_titles;
+        StringBuilder slide_images;
+        StringBuilder slide_image_titles;
         String image_notes = "";
         String image_filename;
-        String hymn_number_imagecode = "";
+        StringBuilder hymn_number_imagecode = new StringBuilder();
         key_line = "";
         int imagenums = 0;
 
@@ -791,37 +786,36 @@ public class SetActions extends Activity {
         boolean allimagesdone = false;
         String image_content = "";
         String image_type;
-        slide_images = "";
-        slide_image_titles = "";
+        slide_images = new StringBuilder();
+        slide_image_titles = new StringBuilder();
 
         while (!allimagesdone) { // Keep iterating unless the current eventType is the end of the document
             if(eventType == XmlPullParser.START_TAG) {
                 switch (xpp.getName()) {
                     case "title":
-                        image_title = LoadXML.parseFromHTMLEntities(xpp.nextText());
+                        image_title = loadXML.parseFromHTMLEntities(xpp.nextText());
 
                         break;
                     case "subtitle":
-                        image_subtitle = LoadXML.parseFromHTMLEntities(xpp.nextText());
+                        image_subtitle = loadXML.parseFromHTMLEntities(xpp.nextText());
 
                         break;
                     case "notes":
-                        image_notes = LoadXML.parseFromHTMLEntities(xpp.nextText());
+                        image_notes = loadXML.parseFromHTMLEntities(xpp.nextText());
 
                         break;
                     case "filename":
-                        image_filename = LoadXML.parseFromHTMLEntities(xpp.nextText());
+                        image_filename = loadXML.parseFromHTMLEntities(xpp.nextText());
                         if (image_filename != null && !image_filename.equals("") && !image_filename.isEmpty()) {
-                            slide_images = slide_images + image_filename + "\n";
-                            slide_image_titles = slide_image_titles + "[" + c.getResources().getString(R.string.image) + "_" +
-                                    (imagenums + 1) + "]\n" + image_filename + "\n\n";
+                            slide_images.append(image_filename).append("\n");
+                            slide_image_titles.append("[").append(c.getResources().getString(R.string.image)).append("_").append(imagenums + 1).append("]\n").append(image_filename).append("\n\n");
                             imagenums++;
                             encodedimage = false;
                         }
 
                         break;
                     case "description":
-                        String file_name = LoadXML.parseFromHTMLEntities(xpp.nextText());
+                        String file_name = loadXML.parseFromHTMLEntities(xpp.nextText());
                         if (file_name.contains(".png") || file_name.contains(".PNG")) {
                             image_type = ".png";
                         } else if (file_name.contains(".gif") || file_name.contains(".GIF")) {
@@ -837,21 +831,14 @@ public class SetActions extends Activity {
                                 image_title = c.getResources().getString(R.string.image);
                             }
 
-                            File imgfile = new File(FullscreenActivity.dircustomimages + "/" + image_title + imagenums + image_type);
-                            while (imgfile.exists()) {
-
-                                image_title += "_";
-                                imgfile = new File(FullscreenActivity.dircustomimages + "/" + image_title + imagenums + image_type);
-                            }
-                            FileOutputStream overWrite = new FileOutputStream(imgfile, false);
+                            DocumentFile imgfile = storageAccess.getFileLocationAsDocumentFile(c,homeFolder,
+                                    "Images","_cache",
+                                    image_title + imagenums + image_type);
+                            OutputStream overWrite = storageAccess.getOutputStreamFromUri(c,imgfile.getUri());
                             byte[] decodedString = Base64.decode(image_content, Base64.DEFAULT);
-                            overWrite.write(decodedString);
-                            overWrite.flush();
-                            overWrite.close();
+                            storageAccess.writeBytes(c,overWrite,decodedString);
                             image_content = "";
-                            slide_images = slide_images + imgfile.toString() + "\n";
-                            slide_image_titles = slide_image_titles + "[" + c.getResources().getString(R.string.image) + "_" +
-                                    (imagenums + 1) + "]\n" + imgfile + "\n\n";
+                            slide_image_titles.append("[").append(c.getResources().getString(R.string.image)).append("_").append(imagenums + 1).append("]\n").append(imgfile).append("\n\n");
                             imagenums++;
                             encodedimage = false;
                         }
@@ -859,7 +846,7 @@ public class SetActions extends Activity {
                         break;
                     case "image":
                         image_content = xpp.nextText();
-                        hymn_number_imagecode = hymn_number_imagecode + image_content.trim() + "XX_IMAGE_XX";
+                        hymn_number_imagecode.append(image_content.trim()).append("XX_IMAGE_XX");
                         encodedimage = true;
                         break;
                 }
@@ -890,7 +877,7 @@ public class SetActions extends Activity {
         }
 
         if (slide_images ==null) {
-            slide_images = "";
+            slide_images = new StringBuilder();
         }
 
         if (image_name ==null) {
@@ -902,22 +889,22 @@ public class SetActions extends Activity {
         }
 
         if (slide_image_titles ==null) {
-            slide_image_titles = "";
+            slide_image_titles = new StringBuilder();
         }
 
         title = image_title;
         author = image_subtitle;
         user1 = image_seconds;
         user2 = image_loop;
-        user3 = slide_images.trim();
+        user3 = slide_images.toString().trim();
         aka = image_name;
-        hymn_number = hymn_number_imagecode;
+        hymn_number = hymn_number_imagecode.toString();
         key_line = image_notes;
-        lyrics = slide_image_titles.trim();
-        writeTempSlide(c.getResources().getString(R.string.image),title,c);
+        lyrics = slide_image_titles.toString().trim();
+        writeTempSlide(c, homeFolder, c.getResources().getString(R.string.image),title);
     }
 
-    static void prepareFirstItem(Context c) {
+    void prepareFirstItem(Context c, DocumentFile homeFolder) {
         // If we have just loaded a set, and it isn't empty,  load the first item
         if (FullscreenActivity.mSetList.length>0) {
             FullscreenActivity.whatsongforsetwork = FullscreenActivity.mSetList[0];
@@ -930,14 +917,15 @@ public class SetActions extends Activity {
             getSongFileAndFolder(c);
 
             // Match the song folder
-            ListSongFiles.getAllSongFiles();
+            ListSongFiles listSongFiles = new ListSongFiles();
+            listSongFiles.getAllSongFiles(c, homeFolder);
 
             // Get the index of the song in the current set
-            SetActions.indexSongInSet();
+            indexSongInSet();
         }
     }
 
-    static void getSongFileAndFolder(Context c) {
+    void getSongFileAndFolder(Context c) {
         if (!FullscreenActivity.linkclicked.contains("/")) {
             FullscreenActivity.linkclicked = "/" + FullscreenActivity.linkclicked;
         }
@@ -1016,7 +1004,7 @@ public class SetActions extends Activity {
         }
     }
 
-    static void doMoveInSet(Context c) {
+    void doMoveInSet(Context c, DocumentFile homeFolder) {
         mListener = (MyInterface) c;
 
         boolean justmovingsections = false;
@@ -1076,12 +1064,11 @@ public class SetActions extends Activity {
             Preferences.savePreferences();
 
             // Match the song folder
-            ListSongFiles.getAllSongFiles();
+            ListSongFiles listSongFiles = new ListSongFiles();
+            listSongFiles.getAllSongFiles(c, homeFolder);
 
             FullscreenActivity.setMoveDirection = "";
             mListener.loadSong();
         }
-
     }
-
 }

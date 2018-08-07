@@ -7,6 +7,7 @@ import android.content.DialogInterface;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,7 +19,6 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import java.io.File;
 import java.util.ArrayList;
 
 public class PopUpSongFolderRenameFragment extends DialogFragment {
@@ -30,9 +30,11 @@ public class PopUpSongFolderRenameFragment extends DialogFragment {
     static ArrayList<String> oldtempfolders;
     GetFoldersAsync getFolders_async;
     String tempNewFolder;
-    File checkExists;
     String tempOldFolder;
     TextView title;
+    LoadXML loadXML;
+    StorageAccess storageAccess;
+    DocumentFile homeFolder;
 
     static PopUpSongFolderRenameFragment newInstance(String message) {
         myTask = message;
@@ -86,6 +88,9 @@ public class PopUpSongFolderRenameFragment extends DialogFragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        storageAccess = new StorageAccess();
+        homeFolder = storageAccess.getHomeFolder(getActivity());
+        loadXML = new LoadXML();
         getDialog().setTitle(getActivity().getResources().getString(R.string.options_song_rename));
         switch (myTask) {
             case "create":
@@ -182,7 +187,7 @@ public class PopUpSongFolderRenameFragment extends DialogFragment {
         }
 
         try {
-            LoadXML.loadXML(getActivity());
+            loadXML.loadXML(getActivity(), homeFolder);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -198,8 +203,7 @@ public class PopUpSongFolderRenameFragment extends DialogFragment {
 
     public void doCreateFolder() {
         // Try to create
-        File newfoldertomake = new File(FullscreenActivity.dir + "/" + tempNewFolder);
-        if (newfoldertomake.mkdirs()) {
+        if (storageAccess.tryCreateSongSubFolder(getActivity(), homeFolder, tempNewFolder).exists()) {
             FullscreenActivity.myToastMessage = getResources().getString(R.string.newfolder) + " - " + getResources().getString(R.string.ok);
         } else {
             FullscreenActivity.myToastMessage = getResources().getString(R.string.newfolder) + " - " + getResources().getString(R.string.createfoldererror);
@@ -208,24 +212,18 @@ public class PopUpSongFolderRenameFragment extends DialogFragment {
 
     public void doRenameFolder() {
         // Try to rename
-        File from = new File(FullscreenActivity.dir + "/" + tempOldFolder);
-        File to = new File(FullscreenActivity.dir + "/" + tempNewFolder);
-        if (from.renameTo(to)) {
+        if (storageAccess.renameSongFolder(getActivity(),homeFolder,tempOldFolder,tempNewFolder)) {
             FullscreenActivity.myToastMessage = getResources().getString(R.string.renametitle) + " - " + getResources().getString(R.string.ok);
+            FullscreenActivity.whichSongFolder = tempNewFolder;
         } else {
             FullscreenActivity.myToastMessage = getResources().getString(R.string.renametitle) + " - " + getResources().getString(R.string.createfoldererror);
         }
-
-        FullscreenActivity.whichSongFolder = tempNewFolder;
     }
 
     public void getVariables() {
         // Get the variables
         tempNewFolder = newFolderNameEditText.getText().toString().trim();
-        checkExists = new File(FullscreenActivity.dir + "/" + tempNewFolder);
-
         if (!tempNewFolder.equals("") && !tempNewFolder.isEmpty() && !tempNewFolder.contains("/") &&
-                !checkExists.exists() &&
                 !tempNewFolder.equals(FullscreenActivity.mainfoldername)) {
             FullscreenActivity.newFolder = tempNewFolder;
             tempOldFolder = FullscreenActivity.currentFolder;
@@ -237,7 +235,8 @@ public class PopUpSongFolderRenameFragment extends DialogFragment {
 
         @Override
         protected String doInBackground(Object... params) {
-            ListSongFiles.getAllSongFolders();
+            ListSongFiles listSongFiles = new ListSongFiles();
+            listSongFiles.getAllSongFolders(getActivity(), homeFolder);
 
             // The song folder
             oldtempfolders = new ArrayList<>();

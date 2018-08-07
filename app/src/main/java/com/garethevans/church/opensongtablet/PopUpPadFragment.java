@@ -9,6 +9,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.support.v7.widget.SwitchCompat;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -23,8 +24,6 @@ import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import java.io.File;
-import java.net.URI;
 import java.util.ArrayList;
 
 public class PopUpPadFragment extends DialogFragment {
@@ -87,6 +86,9 @@ public class PopUpPadFragment extends DialogFragment {
     String text;
     boolean validpad;
 
+    StorageAccess storageAccess;
+    DocumentFile homeFolder;
+
     AsyncTask<Object,Void,String> set_pad;
 
     boolean mStopHandler = false;
@@ -110,6 +112,9 @@ public class PopUpPadFragment extends DialogFragment {
         if (savedInstanceState != null) {
             this.dismiss();
         }
+
+        storageAccess = new StorageAccess();
+        homeFolder = storageAccess.getHomeFolder(getActivity());
 
         getDialog().setCanceledOnTouchOutside(true);
         getDialog().requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -174,7 +179,7 @@ public class PopUpPadFragment extends DialogFragment {
             Log.d("d","Error setting pad values");
         }
 
-        ProcessSong.processKey();
+        ProcessSong.processKey(getActivity());
         popupPad_key.setSelection(FullscreenActivity.keyindex);
 
         // Set the listeners
@@ -200,7 +205,7 @@ public class PopUpPadFragment extends DialogFragment {
     public void doSave() {
         PopUpEditSongFragment.prepareSongXML();
         try {
-            PopUpEditSongFragment.justSaveSongXML();
+            PopUpEditSongFragment.justSaveSongXML(getActivity());
         } catch (Exception e) {
             e.printStackTrace();
             FullscreenActivity.myToastMessage = getActivity().getResources().getString(R.string.savesong) + " - " +
@@ -250,7 +255,7 @@ public class PopUpPadFragment extends DialogFragment {
             }
             PopUpEditSongFragment.prepareSongXML();
             try {
-                PopUpEditSongFragment.justSaveSongXML();
+                PopUpEditSongFragment.justSaveSongXML(getActivity());
             } catch (Exception e) {
                 e.printStackTrace();
                 FullscreenActivity.myToastMessage = getActivity().getResources().getString(R.string.savesong) + " - " +
@@ -396,17 +401,8 @@ public class PopUpPadFragment extends DialogFragment {
 
     private void startenabled() {
         validpad = false;
-        String filetext = FullscreenActivity.mLinkAudio;
-        filetext = filetext.replace("file://","");
-        // If this is a localised file, we need to unlocalise it to enable it to be read
-        if (filetext.startsWith("../OpenSong/")) {
-            filetext = filetext.replace("../OpenSong/",FullscreenActivity.homedir+"/");
-        }
-        //filetext = "file://" + filetext;
-        // The above line was causing errors (file was wrong location)
-
-        // Try to fix the start of the file
-        File file = new File(URI.create(filetext).getPath());
+        StorageAccess sa = new StorageAccess();
+        DocumentFile file = sa.getLocalisedFile(getActivity(),homeFolder,FullscreenActivity.mLinkAudio);
 
         if (popupPad_file.getSelectedItemPosition() == 0 && popupPad_key.getSelectedItemPosition() > 0) {
             validpad = true;

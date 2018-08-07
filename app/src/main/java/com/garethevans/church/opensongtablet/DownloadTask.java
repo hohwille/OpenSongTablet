@@ -1,10 +1,10 @@
 package com.garethevans.church.opensongtablet;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.AsyncTask;
+import android.support.v4.provider.DocumentFile;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -19,9 +19,13 @@ class DownloadTask extends AsyncTask<String, Integer, String> {
     private MyInterface mListener;
     private String address;
     private String filename;
-
-        DownloadTask(Context context, String address) {
+    @SuppressLint("StaticFieldLeak")
+    private Context c;
+    private DocumentFile homeFolder;
+        DownloadTask(Context context, DocumentFile home, String address) {
+            homeFolder = home;
             this.address = address;
+            this.c = context;
             mListener = (MyInterface) context;
             switch (FullscreenActivity.whattodo) {
                 case "download_band":
@@ -59,13 +63,14 @@ class DownloadTask extends AsyncTask<String, Integer, String> {
 
                 // download the file
                 input = connection.getInputStream();
-                output = new FileOutputStream(FullscreenActivity.homedir + "/" + filename);
+                StorageAccess storageAccess = new StorageAccess();
+                output = storageAccess.getOutputStream(c,homeFolder,"","",filename);
 
                 byte data[] = new byte[4096];
                 long total = 0;
                 int count;
                 while ((count = input.read(data)) != -1) {
-                    // allow canceling with back button
+                    // allow cancelling with back button
                     if (isCancelled()) {
                         input.close();
                         return null;
@@ -97,7 +102,8 @@ class DownloadTask extends AsyncTask<String, Integer, String> {
         @Override
         protected void onPostExecute(String s) {
             FullscreenActivity.whattodo = "processimportosb";
-            FullscreenActivity.filechosen = new File(FullscreenActivity.homedir + "/" + filename);
+            StorageAccess sa = new StorageAccess();
+            FullscreenActivity.filechosen = sa.getFileLocationAsDocumentFile(c, homeFolder,"","",filename);
             if (mListener!=null) {
                 mListener.openFragment();
             }

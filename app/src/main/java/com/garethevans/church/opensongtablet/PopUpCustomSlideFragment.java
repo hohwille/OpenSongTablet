@@ -3,11 +3,9 @@ package com.garethevans.church.opensongtablet;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.DialogFragment;
-import android.content.CursorLoader;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.Resources;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
@@ -15,11 +13,9 @@ import android.graphics.drawable.Drawable;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
-import android.provider.DocumentsContract;
-import android.provider.MediaStore;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -42,7 +38,6 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 
-import java.io.File;
 import java.net.URLEncoder;
 
 public class PopUpCustomSlideFragment extends DialogFragment {
@@ -309,40 +304,40 @@ public class PopUpCustomSlideFragment extends DialogFragment {
 
     public void doSave(){
         FullscreenActivity.noteorslide = whattype;
-        String text = slideContentEditText.getText().toString().trim();
+        StringBuilder text = new StringBuilder(slideContentEditText.getText().toString().trim());
         FullscreenActivity.customreusable = saveReusableCheckBox.isChecked();
-        String imagecontents;
+        StringBuilder imagecontents;
         if (whattype.equals("image")) {
-            imagecontents = "";
+            imagecontents = new StringBuilder();
             // Go through images in list and extract the full location and the filename
             for (int r = 0; r < slideImageTable.getChildCount(); r++) {
                 // Look for image file location
                 if (slideImageTable.getChildAt(r) instanceof TableRow) {
                     TextView tv = (TextView) ((TableRow) slideImageTable.getChildAt(r)).getChildAt(0);
                     String tv_text = tv.getText().toString();
-                    imagecontents = imagecontents + tv_text + "\n";
+                    imagecontents.append(tv_text).append("\n");
                 }
             }
 
-            while (imagecontents.contains("\n\n")) {
-                imagecontents = imagecontents.replace("\n\n", "\n");
+            while (imagecontents.toString().contains("\n\n")) {
+                imagecontents = new StringBuilder(imagecontents.toString().replace("\n\n", "\n"));
             }
-            imagecontents = imagecontents.trim();
-            String[] individual_images = imagecontents.split("\n");
+            imagecontents = new StringBuilder(imagecontents.toString().trim());
+            String[] individual_images = imagecontents.toString().split("\n");
 
             // Prepare the lyrics
-            text = "";
+            text = new StringBuilder();
             for (int t = 0; t < individual_images.length; t++) {
-                text = text + "[" + getActivity().getResources().getString(R.string.image) + "_" + (t + 1) + "]\n" + individual_images[t] + "\n\n";
+                text.append("[").append(getActivity().getResources().getString(R.string.image)).append("_").append(t + 1).append("]\n").append(individual_images[t]).append("\n\n");
             }
-            text = text.trim();
+            text = new StringBuilder(text.toString().trim());
 
         } else {
-            imagecontents = "";
+            imagecontents = new StringBuilder();
         }
         FullscreenActivity.customslide_title = slideTitleEditText.getText().toString();
-        FullscreenActivity.customslide_content = text;
-        FullscreenActivity.customimage_list = imagecontents;
+        FullscreenActivity.customslide_content = text.toString();
+        FullscreenActivity.customimage_list = imagecontents.toString();
         FullscreenActivity.customimage_loop = "" + loopCheckBox.isChecked() + "";
         FullscreenActivity.customimage_time = timeEditText.getText().toString();
         // Check the slide has a title.  If not, use _
@@ -523,48 +518,25 @@ public class PopUpCustomSlideFragment extends DialogFragment {
 
         if (intent!=null) {
             Uri uri = intent.getData();
-            Log.d("onActivityResult","uri="+uri);
+            /*Log.d("onActivityResult","uri="+uri);
             String fullpath;
             if (Build.VERSION.SDK_INT >= 19) {
                 fullpath = getRealPathFromURI_API19(uri);
             } else {
                 fullpath = getRealPathFromURI_API11to18(uri);
-            }
-            /*Cursor cursor = null;
-            String fullpath = uri.toString();
-            try {
-                String[] proj = { MediaStore.Images.Media.DATA };
-                cursor = getActivity().getContentResolver().query(uri,  proj, null, null, null);
-                int column_index;
-                if (cursor != null) {
-                    column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-                    try {
-                        cursor.moveToFirst();
-                        fullpath = cursor.getString(column_index);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-
-            } finally {
-                if (cursor != null) {
-                    cursor.close();
-                }
             }*/
 
             if (requestCode==0) {
                 // Create a new row in the table
                 // Each row has the file name, an image thumbnail and a delete button
-                if (fullpath!=null) {
-                    File f = new File(uri.getPath());
-                    fullpath = f.toString();
-                    Log.d("d","fullpath="+fullpath);
+                if (uri!=null) {
+                    addRow(uri.toString());
                 }
-                addRow(fullpath);
             }
         }
     }
 
+/*
     @SuppressLint("NewApi")
     public String getRealPathFromURI_API19(Uri uri){
         String filePath = "";
@@ -609,6 +581,7 @@ public class PopUpCustomSlideFragment extends DialogFragment {
         }
         return result;
     }
+*/
 
     @SuppressLint("SetJavaScriptEnabled")
     public void searchBible() {
@@ -652,8 +625,8 @@ public class PopUpCustomSlideFragment extends DialogFragment {
             Bitmap ThumbImage;
             Resources res = getResources();
             BitmapDrawable bd;
-            File checkfile = new File(fullpath);
-            if (!checkfile.exists()) {
+            DocumentFile df = DocumentFile.fromSingleUri(getActivity(), Uri.parse(fullpath));
+            if (!df.exists()) {
                 Drawable notfound = getResources().getDrawable(R.drawable.notfound);
                 thumbnail.setImageDrawable(notfound);
             } else {

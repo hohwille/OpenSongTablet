@@ -8,6 +8,7 @@ import android.graphics.Bitmap;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,8 +20,7 @@ import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-import java.io.File;
-import java.io.FileOutputStream;
+import java.io.OutputStream;
 
 public class PopUpCreateDrawingFragment extends DialogFragment {
 
@@ -98,7 +98,7 @@ public class PopUpCreateDrawingFragment extends DialogFragment {
     int isvis = View.VISIBLE;
     int isgone = View.GONE;
 
-    File hf;
+    DocumentFile hf;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -248,7 +248,7 @@ public class PopUpCreateDrawingFragment extends DialogFragment {
         delete_FAB.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                drawView.startNew(hf);
+                drawView.startNew(getActivity(),hf.getUri());
             }
         });
         // Hide the undo/redo buttons for now
@@ -282,7 +282,7 @@ public class PopUpCreateDrawingFragment extends DialogFragment {
         // If this file already exists, load it up!
         hf = ProcessSong.getHighlightFile(getActivity());
         if (hf!=null && hf.exists()) {
-            drawView.loadImage(hf);
+            drawView.loadImage(hf.getUri());
         }
     }
 
@@ -507,11 +507,13 @@ public class PopUpCreateDrawingFragment extends DialogFragment {
     @SuppressLint("StaticFieldLeak")
     private class DoSave extends AsyncTask<Object, Void, Void> {
 
-        File f;
+        DocumentFile f;
         Bitmap bmp;
+        StorageAccess sa;
 
         @Override
         protected  void onPreExecute() {
+            sa = new StorageAccess();
             if (FullscreenActivity.saveHighlight) {
                 FullscreenActivity.highlightOn = true;
                 drawView.setDrawingCacheEnabled(true);
@@ -534,7 +536,7 @@ public class PopUpCreateDrawingFragment extends DialogFragment {
         protected Void doInBackground(Object... objects) {
             if (f!=null && bmp!=null) {
                 try {
-                    FileOutputStream out = new FileOutputStream(f);
+                    OutputStream out = sa.getOutputStreamFromUri(getActivity(),f.getUri());
                     bmp.compress(Bitmap.CompressFormat.PNG, 100, out);
                     out.flush();
                     out.close();

@@ -26,52 +26,58 @@ public class SongMenuListeners extends Activity {
         return new TextView.OnClickListener() {
             @Override
             public void onClick(View v) {
-                FullscreenActivity.pdfPageCurrent = 0;
-                if (FullscreenActivity.mSongFileNames.length>i) {
-                    if (FullscreenActivity.songDetails[i][2].equals(c.getString(R.string.songsinfolder))) {
-                        String s = FullscreenActivity.songDetails[i][1];
-                        if (s.startsWith("/")) {
-                            s = s.replaceFirst("/","");
-                        }
-                        FullscreenActivity.whichSongFolder = s;
-                        mListener.prepareSongMenu();
-                    } else {
-                        if (FullscreenActivity.mSongFileNames.length>i && FullscreenActivity.mSongFileNames[i]!=null) {
-                            FullscreenActivity.songfilename = FullscreenActivity.mSongFileNames[i];
+                try {
+                    SetActions setActions = new SetActions();
+                    FullscreenActivity.pdfPageCurrent = 0;
+                    if (FullscreenActivity.mSongFileNames.length > i) {
+                        if (FullscreenActivity.songDetails[i][2].equals(c.getString(R.string.songsinfolder))) {
+                            String s = FullscreenActivity.songDetails[i][1];
+                            if (s.startsWith("/")) {
+                                s = s.replaceFirst("/", "");
+                            }
+                            FullscreenActivity.whichSongFolder = s;
+                            mListener.prepareSongMenu();
                         } else {
-                            FullscreenActivity.songfilename = "";
-                        }
-                        if (FullscreenActivity.setView && FullscreenActivity.setSize > 0) {
-                            // Get the name of the song to look for (including folders if need be)
-                            SetActions.getSongForSetWork(c);
-
-                            if (FullscreenActivity.mySet.contains(FullscreenActivity.whatsongforsetwork)) {
-                                // Song is in current set.  Find the song position in the current set and load it (and next/prev)
-
-                                FullscreenActivity.previousSongInSet = "";
-                                FullscreenActivity.nextSongInSet = "";
-                                SetActions.prepareSetList();
-                                //setupSetButtons();
+                            if (FullscreenActivity.mSongFileNames.length > i && FullscreenActivity.mSongFileNames[i] != null) {
+                                FullscreenActivity.songfilename = FullscreenActivity.mSongFileNames[i];
                             } else {
-                                // Song isn't in the set, so just show the song
+                                FullscreenActivity.songfilename = "";
+                            }
+                            if (FullscreenActivity.setView && FullscreenActivity.setSize > 0) {
+                                // Get the name of the song to look for (including folders if need be)
+                                setActions.getSongForSetWork(c);
+
+                                if (FullscreenActivity.mySet.contains(FullscreenActivity.whatsongforsetwork)) {
+                                    // Song is in current set.  Find the song position in the current set and load it (and next/prev)
+
+                                    FullscreenActivity.previousSongInSet = "";
+                                    FullscreenActivity.nextSongInSet = "";
+                                    setActions.prepareSetList();
+                                    //setupSetButtons();
+                                } else {
+                                    // Song isn't in the set, so just show the song
+                                    // Switch off the set view (buttons in action bar)
+                                    FullscreenActivity.setView = false;
+                                    // Re-enable the disabled button
+                                }
+                            } else {
+                                // User wasn't in set view, or the set was empty
                                 // Switch off the set view (buttons in action bar)
                                 FullscreenActivity.setView = false;
-                                // Re-enable the disabled button
                             }
-                        } else {
-                            // User wasn't in set view, or the set was empty
-                            // Switch off the set view (buttons in action bar)
-                            FullscreenActivity.setView = false;
-                        }
 
-                        // Now save the preferences
-                        Preferences.savePreferences();
+                            // Now save the preferences
+                            Preferences.savePreferences();
 
-                        // Now tell the activity to fix the options menu and close the drawers
-                        if (mListener != null) {
-                            mListener.songShortClick(i);
+                            // Now tell the activity to fix the options menu and close the drawers
+                            if (mListener != null) {
+                                mListener.songShortClick(i);
+                            }
                         }
                     }
+                } catch (Exception e) {
+                    // Probably a null item (not loaded yet)
+                    e.printStackTrace();
                 }
             }
         };

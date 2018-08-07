@@ -6,20 +6,15 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.media.MediaPlayer;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.StrictMode;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
-import android.webkit.MimeTypeMap;
 import android.widget.EditText;
 import android.widget.TextView;
-
-import java.io.File;
-import java.lang.reflect.Method;
 
 public class PopUpLinks extends DialogFragment {
 
@@ -35,6 +30,9 @@ public class PopUpLinks extends DialogFragment {
     FloatingActionButton linkWebClear_ImageButton;
     FloatingActionButton linkAudioClear_ImageButton;
     FloatingActionButton linkOtherClear_ImageButton;
+
+    StorageAccess storageAccess;
+    DocumentFile homeFolder;
 
     static PopUpLinks newInstance() {
         PopUpLinks frag;
@@ -84,14 +82,6 @@ public class PopUpLinks extends DialogFragment {
             mListener.pageButtonAlpha("links");
         }
 
-        if (Build.VERSION.SDK_INT>=24) {
-            try {
-                Method m = StrictMode.class.getMethod("disableDeathOnFileUriExposure");
-                m.invoke(null);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
         final View V = inflater.inflate(R.layout.popup_links, container, false);
 
         TextView title = V.findViewById(R.id.dialogtitle);
@@ -168,59 +158,51 @@ public class PopUpLinks extends DialogFragment {
         linkOther_EditText.setFocusable(false);
         linkOther_EditText.setFocusableInTouchMode(false);
 
+        storageAccess = new StorageAccess();
+        homeFolder = storageAccess.getHomeFolder(getActivity());
+        DocumentFile df = null;
+        String link = "";
+        // Get the file (localised or not)
+        if (FullscreenActivity.filechosen!=null && !FullscreenActivity.filechosen.toString().equals("")) {
+            link = FullscreenActivity.filechosen.getUri().toString();
+            df = storageAccess.getLocalisedFile(getActivity(), homeFolder, link);
+        }
+
         // If a filetoselect has been set, add this to the view
         if (FullscreenActivity.filetoselect.equals("audiolink") &&
                 FullscreenActivity.filechosen!=null && !FullscreenActivity.filechosen.toString().equals("")) {
-            // Get audio link
-            String link = Uri.fromFile(FullscreenActivity.filechosen).toString();
-            if (link.contains("/OpenSong/") && !link.contains("../OpenSong/")) {
-                // Make this package local by removing everything before it
-                int pos = link.indexOf("/OpenSong/");
-                link = "../OpenSong/" + link.substring(pos+10);
-            }
             linkAudio_EditText.setText(link);
             FullscreenActivity.mLinkAudio = link;
             // If this is a genuine audio file, give the user the option of setting the song duration to match this file
-            MediaPlayer mediafile = new MediaPlayer();
-            try {
-                // Parse for package local audio
-                if (link.startsWith("../OpenSong/")) {
-                    link = link.replace("../OpenSong/",FullscreenActivity.homedir + "/");
+            if (df!=null && df.exists() && df.getType().contains("audio")) {
+                MediaPlayer mediafile = new MediaPlayer();
+                try {
+                    mediafile.setDataSource(getActivity(), df.getUri());
+                    mediafile.prepareAsync();
+                    mediafile.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                        @Override
+                        public void onPrepared(MediaPlayer mp) {
+                            FullscreenActivity.audiolength = (int) (mp.getDuration() / 1000.0f);
+                            mp.release();
+                        }
+                    });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    linkAudio_EditText.setText("");
+                    FullscreenActivity.myToastMessage = getString(R.string.not_allowed);
+                    ShowToast.showToast(getActivity());
+                    mediafile.release();
                 }
-                if (!link.startsWith("file://")) {
-                    link = "file://" + link;
-                }
-                mediafile.setDataSource(getActivity(),Uri.parse(link));
-                mediafile.prepareAsync();
-                mediafile.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                    @Override
-                    public void onPrepared(MediaPlayer mp) {
-                        FullscreenActivity.audiolength = (int) (mp.getDuration() / 1000.0f);
-                        mp.release();
-                    }
-                });
-            } catch (Exception e) {
-                e.printStackTrace();
-                linkAudio_EditText.setText("");
-                FullscreenActivity.myToastMessage = getString(R.string.not_allowed);
-                ShowToast.showToast(getActivity());
-                mediafile.release();
             }
 
         } else if (FullscreenActivity.filetoselect.equals("otherlink") && FullscreenActivity.filechosen!=null) {
             // Get other link
-            String link = Uri.fromFile(FullscreenActivity.filechosen).toString();
-            if (link.contains("/OpenSong/") && !link.contains("../OpenSong/")) {
-                // Make this package local by removing everything before it
-                int pos = link.indexOf("/OpenSong/");
-                link = "../OpenSong/" + link.substring(pos+10);
-            }
             linkOther_EditText.setText(link);
             FullscreenActivity.mLinkOther = link;
         }
+
         FullscreenActivity.filechosen = null;
         FullscreenActivity.filetoselect = "";
-
 
         linkAudio_EditText.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -273,32 +255,11 @@ public class PopUpLinks extends DialogFragment {
             public void onClick(View v) {
                 String mytext = linkAudio_EditText.getText().toString();
                 if (!mytext.equals("")) {
-                    MimeTypeMap myMime = MimeTypeMap.getSingleton();
+                    StorageAccess sa = new StorageAccess();
+                    DocumentFile getfile = sa.getLocalisedFile(getActivity(),homeFolder, mytext);
+                    String myMime = getfile.getType();
                     Intent newIntent = new Intent(Intent.ACTION_VIEW);
-                    String grabbedaudiofile = linkAudio_EditText.getText().toString();
-                    if (grabbedaudiofile.startsWith("../OpenSong/")) {
-                        // This is local to the packge, so fix it
-                        grabbedaudiofile = "file://" + grabbedaudiofile.replace("../OpenSong/", FullscreenActivity.homedir + "/");
-                    }
-                    Uri uri2 = Uri.parse(grabbedaudiofile);
-                    File getfile = new File(grabbedaudiofile);
-
-                    String ext = MimeTypeMap.getFileExtensionFromUrl(getfile.getName()).toLowerCase();
-                    if (ext.isEmpty()) {
-                        ext = "";
-                    }
-                    String mimeType;
-                    try {
-                        mimeType = myMime.getMimeTypeFromExtension(ext);
-                    } catch (Exception e) {
-                        mimeType = "*/*";
-                    }
-
-                    if (mimeType == null) {
-                        mimeType = "*/*";
-                    }
-
-                    newIntent.setDataAndType(uri2, mimeType);
+                    newIntent.setDataAndType(getfile.getUri(), myMime);
                     newIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     try {
                         startActivity(newIntent);
@@ -316,18 +277,12 @@ public class PopUpLinks extends DialogFragment {
             public void onClick(View v) {
                 String mytext = linkOther_EditText.getText().toString();
                 if (!mytext.equals("")) {
-                    MimeTypeMap myMime = MimeTypeMap.getSingleton();
+                    StorageAccess sa = new StorageAccess();
+                    DocumentFile getfile = sa.getLocalisedFile(getActivity(), homeFolder, mytext);
+                    String myMime = getfile.getType();
                     Intent newIntent = new Intent(Intent.ACTION_VIEW);
-                    Uri uri2 = Uri.parse(linkOther_EditText.getText().toString());
-                    File getfile = new File(linkOther_EditText.getText().toString());
-                    String ext = MimeTypeMap.getFileExtensionFromUrl(getfile.getName()).toLowerCase();
-                    String mimeType = myMime.getMimeTypeFromExtension(ext);
 
-                    if (mimeType == null) {
-                        mimeType = "*/*";
-                    }
-
-                    newIntent.setDataAndType(uri2, mimeType);
+                    newIntent.setDataAndType(getfile.getUri(), myMime);
                     newIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     try {
                         startActivity(newIntent);
@@ -356,7 +311,7 @@ public class PopUpLinks extends DialogFragment {
         // Now resave the song with these new links
         PopUpEditSongFragment.prepareSongXML();
         try {
-            PopUpEditSongFragment.justSaveSongXML();
+            PopUpEditSongFragment.justSaveSongXML(getActivity());
             mListener.refreshAll();
             dismiss();
         } catch (Exception e) {

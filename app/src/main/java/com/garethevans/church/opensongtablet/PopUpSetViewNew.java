@@ -11,6 +11,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.support.v4.view.animation.PathInterpolatorCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -25,9 +26,6 @@ import android.view.animation.Interpolator;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URLEncoder;
@@ -82,6 +80,13 @@ public class PopUpSetViewNew extends DialogFragment {
     static ItemTouchHelper helper;
     FloatingActionButton saveMe;
 
+    StorageAccess storageAccess;
+    DocumentFile homeFolder;
+    SetActions setActions;
+    LoadXML loadXML;
+
+    View V;
+
     @Override
     public void onStart() {
         super.onStart();
@@ -102,42 +107,20 @@ public class PopUpSetViewNew extends DialogFragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         super.onCreateView(inflater,container,savedInstanceState);
-        a = getActivity();
-        getDialog().requestWindowFeature(Window.FEATURE_NO_TITLE);
-        getDialog().setCanceledOnTouchOutside(true);
+        V = inflater.inflate(R.layout.popup_setview_new, container, false);
+        setUpTheTitle();
 
-        final View V = inflater.inflate(R.layout.popup_setview_new, container, false);
-        setfrag = getDialog();
-        TextView title = V.findViewById(R.id.dialogtitle);
-        String titletext = getActivity().getResources().getString(R.string.options_set)+displaySetName();
-        title.setText(titletext);
-        final FloatingActionButton closeMe = V.findViewById(R.id.closeMe);
-        closeMe.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                CustomAnimations.animateFAB(closeMe, PopUpSetViewNew.this.getActivity());
-                closeMe.setEnabled(false);
-                PopUpSetViewNew.this.dismiss();
-            }
-        });
-        saveMe = V.findViewById(R.id.saveMe);
-        saveMe.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                PopUpSetViewNew.this.doSave();
-                refresh();
-                close();
-            }
-        });
-        if (FullscreenActivity.whattodo.equals("setitemvariation")) {
-            CustomAnimations.animateFAB(saveMe,getActivity());
-            saveMe.setEnabled(false);
-            saveMe.setVisibility(View.GONE);
-        }
+        // Declare the helper classes
+        storageAccess = new StorageAccess();
+        homeFolder = storageAccess.getHomeFolder(getActivity());
+        setActions = new SetActions();
+        loadXML = new LoadXML();
 
-        if (getDialog().getWindow()!=null) {
-            getDialog().getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        }
+        // Initialise the views
+        initialiseTheViews();
+
+
+
         if (mListener!=null) {
             mListener.pageButtonAlpha("set");
         }
@@ -222,8 +205,8 @@ public class PopUpSetViewNew extends DialogFragment {
             public void onClick(View view) {
                 // Save any changes to current set first
                 doSave();
-
-                File settosave = new File(FullscreenActivity.dirsets,FullscreenActivity.lastSetName);
+                DocumentFile settosave = storageAccess.getFileLocationAsDocumentFile(getActivity(),
+                        homeFolder,"Sets","", FullscreenActivity.lastSetName);
                 if (FullscreenActivity.lastSetName==null || FullscreenActivity.lastSetName.equals("")) {
                     FullscreenActivity.whattodo = "saveset";
                     if (mListener != null) {
@@ -260,7 +243,7 @@ public class PopUpSetViewNew extends DialogFragment {
 
 
         // Try to move to the corresponding item in the set that we are viewing.
-        SetActions.indexSongInSet();
+        setActions.indexSongInSet();
 
         // If the song is found (indexSongInSet>-1 and lower than the number of items shown), smooth scroll to it
         if (FullscreenActivity.indexSongInSet>-1 && FullscreenActivity.indexSongInSet<FullscreenActivity.mTempSetList.size()) {
@@ -274,20 +257,73 @@ public class PopUpSetViewNew extends DialogFragment {
         return V;
     }
 
+    void setUpTheTitle() {
+        getDialog().requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getDialog().setCanceledOnTouchOutside(true);
+        setfrag = getDialog();
+        TextView title = V.findViewById(R.id.dialogtitle);
+        String titletext = getActivity().getResources().getString(R.string.options_set)+displaySetName();
+        title.setText(titletext);
+        final FloatingActionButton closeMe = V.findViewById(R.id.closeMe);
+        closeMe.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                CustomAnimations.animateFAB(closeMe, PopUpSetViewNew.this.getActivity());
+                closeMe.setEnabled(false);
+                PopUpSetViewNew.this.dismiss();
+            }
+        });
+        saveMe = V.findViewById(R.id.saveMe);
+        saveMe.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                PopUpSetViewNew.this.doSave();
+                refresh();
+                close();
+            }
+        });
+        if (FullscreenActivity.whattodo.equals("setitemvariation")) {
+            CustomAnimations.animateFAB(saveMe,getActivity());
+            saveMe.setEnabled(false);
+            saveMe.setVisibility(View.GONE);
+        }
+
+        if (getDialog().getWindow()!=null) {
+            getDialog().getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+    }
+
+    void initialiseTheViews() {
+
+
+
+    }
+
+    void threadDo() {
+        // Do this in a separate thread
+        new Thread(new Runnable(){
+
+            @Override
+            public void run() {
+
+            }
+        }).run();
+    }
+
     public void doSave() {
-        String tempmySet = "";
+        StringBuilder tempmySet = new StringBuilder();
         String tempItem;
         if (FullscreenActivity.mTempSetList == null) {
             FullscreenActivity.mTempSetList = new ArrayList<>();
         }
         for (int z=0; z<FullscreenActivity.mTempSetList.size(); z++) {
             tempItem = FullscreenActivity.mTempSetList.get(z);
-            tempmySet = tempmySet + "$**_"+ tempItem + "_**$";
+            tempmySet.append("$**_").append(tempItem).append("_**$");
         }
         FullscreenActivity.mySet = null;
-        FullscreenActivity.mySet = tempmySet;
+        FullscreenActivity.mySet = tempmySet.toString();
         FullscreenActivity.mTempSetList = null;
-        SetActions.prepareSetList();
+        setActions.prepareSetList();
         FullscreenActivity.myToastMessage = getActivity().getString(R.string.currentset) +
                 " - " + getActivity().getString(R.string.ok);
         Preferences.savePreferences();
@@ -324,15 +360,9 @@ public class PopUpSetViewNew extends DialogFragment {
                 }
                 // Replace the last instance of a / (as we may have subfolders)
                 String mysongfolder = tempTitle.substring(0,tempTitle.lastIndexOf("/"));
-                if (mysongfolder==null) {
-                    mysongfolder="";
-                }
                 String mysongtitle = tempTitle.substring(tempTitle.lastIndexOf("/"));
                 if (mysongtitle.startsWith("/")) {
                     mysongtitle = mysongtitle.substring(1);
-                }
-                if (mysongtitle==null) {
-                    mysongtitle="";
                 }
 
                 if (mysongfolder.isEmpty() || mysongfolder.equals("")) {
@@ -346,10 +376,8 @@ public class PopUpSetViewNew extends DialogFragment {
                 Log.d("d","mysongtitle="+mysongtitle);
                 Log.d("d","mysongfolder="+mysongfolder);
 
-                if (i>-1) {
-                    mSongName.add(i, mysongtitle);
-                    mFolderName.add(i, mysongfolder);
-                }
+                mSongName.add(i, mysongtitle);
+                mFolderName.add(i, mysongfolder);
             }
         }
     }
@@ -362,8 +390,8 @@ public class PopUpSetViewNew extends DialogFragment {
                 si.songitem = i+".";
                 si.songtitle = mSongName.get(i - 1);
                 si.songfolder = mFolderName.get(i - 1);
-                String songLocation = LoadXML.getTempFileLocation(getActivity(),mFolderName.get(i-1),mSongName.get(i-1));
-                si.songkey = LoadXML.grabNextSongInSetKey(getActivity(),songLocation);
+                String songLocation = storageAccess.getTempFolderLocation(getActivity(),mFolderName.get(i-1))+mSongName.get(i-1);
+                si.songkey = loadXML.grabNextSongInSetKey(getActivity(),homeFolder,songLocation);
                 // Decide what image we'll need - song, image, note, slide, scripture, variation
                 if (mFolderName.get(i - 1).equals("**"+getActivity().getResources().getString(R.string.slide))) {
                     si.songicon = getActivity().getResources().getString(R.string.slide);
@@ -386,7 +414,7 @@ public class PopUpSetViewNew extends DialogFragment {
         return result;
     }
 
-    public static void loadSong() {
+    public void loadSong() {
         FullscreenActivity.setView = true;
         if (mListener!=null) {
             mListener.loadSongFromSet();
@@ -394,43 +422,16 @@ public class PopUpSetViewNew extends DialogFragment {
         setfrag.dismiss();
     }
 
-    public static void makeVariation(Context c) {
+    public void makeVariation(Context c) {
         // Prepare the name of the new variation slide
         // If the file already exists, add _ to the filename
-        String newfilename = FullscreenActivity.dirvariations + "/" + FullscreenActivity.songfilename;
+        StorageAccess storageAccess = new StorageAccess();
+        DocumentFile homeFolder = storageAccess.getHomeFolder(c);
+        InputStream in = storageAccess.getInputStream(c, homeFolder,"Songs",FullscreenActivity.whichSongFolder,
+                FullscreenActivity.songfilename);
+        OutputStream out = storageAccess.getOutputStream(c, homeFolder, "Variations","",FullscreenActivity.songfilename);
         String newsongname = FullscreenActivity.songfilename;
-        File newfile = new File(newfilename);
-        while (newfile.exists()) {
-            newfilename = newfilename + "_";
-            newsongname = newsongname + "_";
-            newfile = new File(newfilename);
-        }
-
-        // Original file
-        File src;
-        if (FullscreenActivity.whichSongFolder.equals(FullscreenActivity.mainfoldername)) {
-            src = new File(FullscreenActivity.dir + "/" + FullscreenActivity.songfilename);
-        } else {
-            src = new File(FullscreenActivity.dir + "/" + FullscreenActivity.whichSongFolder + "/" + FullscreenActivity.songfilename);
-        }
-
-        // Copy the file into the variations folder
-        try {
-            InputStream in = new FileInputStream(src);
-            OutputStream out = new FileOutputStream(newfile);
-
-            // Transfer bytes from in to out
-            byte[] buf = new byte[1024];
-            int len;
-            while ((len = in.read(buf)) > 0) {
-                out.write(buf, 0, len);
-            }
-            in.close();
-            out.close();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        storageAccess.copyFile(c,in,out);
 
         // Fix the song name and folder for loading
         FullscreenActivity.songfilename = newsongname;
@@ -440,11 +441,11 @@ public class PopUpSetViewNew extends DialogFragment {
         // Replace the set item with the variation item
         FullscreenActivity.mSetList[FullscreenActivity.indexSongInSet] = "**"+c.getResources().getString(R.string.variation)+"/"+newsongname;
         // Rebuild the mySet variable
-        String new_mySet = "";
+        StringBuilder new_mySet = new StringBuilder();
         for (String thisitem:FullscreenActivity.mSetList) {
-            new_mySet = new_mySet + "$**_" + thisitem + "_**$";
+            new_mySet.append("$**_").append(thisitem).append("_**$");
         }
-        FullscreenActivity.mySet = new_mySet;
+        FullscreenActivity.mySet = new_mySet.toString();
 
         Preferences.savePreferences();
 
@@ -461,17 +462,17 @@ public class PopUpSetViewNew extends DialogFragment {
 
     public void doExportSetTweet() {
         // Add the set items
-        String setcontents = "";
+        StringBuilder setcontents = new StringBuilder();
 
         for (String getItem:FullscreenActivity.mSetList) {
             int songtitlepos = getItem.indexOf("/")+1;
             getItem = getItem.substring(songtitlepos);
-            setcontents = setcontents + getItem +", ";
+            setcontents.append(getItem).append(", ");
         }
 
-        setcontents = setcontents.substring(0,setcontents.length()-2);
+        setcontents = new StringBuilder(setcontents.substring(0, setcontents.length() - 2));
 
-        String tweet = setcontents;
+        String tweet = setcontents.toString();
         try {
             tweet = URLEncoder.encode("#OpenSongApp\n" + setcontents,"UTF-8");
         } catch (Exception e) {

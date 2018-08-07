@@ -13,7 +13,7 @@ import android.widget.TextView;
 
 class AutoScrollFunctions {
 
-    static void getAutoScrollTimes() {
+    void getAutoScrollTimes() {
         // Set the autoscroll values
         try {
             FullscreenActivity.autoScrollDuration = Integer.parseInt(FullscreenActivity.mDuration.replaceAll("[\\D]", ""));
@@ -38,7 +38,7 @@ class AutoScrollFunctions {
         }
     }
 
-    static void getAutoScrollValues(ScrollView scrollpage, View main_page, View toolbar) {
+    void getAutoScrollValues(ScrollView scrollpage, View main_page, View toolbar) {
         // Get the autoScrollDuration;
         if (FullscreenActivity.mDuration.isEmpty() && FullscreenActivity.autoscroll_default_or_prompt.equals("default")) {
             FullscreenActivity.autoScrollDuration = FullscreenActivity.default_autoscroll_songlength;
@@ -97,23 +97,10 @@ class AutoScrollFunctions {
         }
     }
 
-    static void getAudioLength(Context c) {
+    void getAudioLength(Context c) {
         MediaPlayer mediafile = new MediaPlayer();
 
-        // Try to fix the mLinkAudio file to get the metadata.
-        // **RAGE** android security permissions messing with file access......
         String audiofile = FullscreenActivity.mLinkAudio;
-        // Strip out the file locator
-        if (audiofile.startsWith("file://")) {
-            audiofile = audiofile.replace("file://","");
-        }
-        // If this is a localised file, we need to unlocalise it to enable it to be read
-        if (audiofile.startsWith("../OpenSong/")) {
-            audiofile = audiofile.replace("../OpenSong/",FullscreenActivity.homedir+"/");
-        }
-        // Add the file locator back in
-        audiofile = "file://" + audiofile;
-
         if (FullscreenActivity.mLinkAudio!=null && !FullscreenActivity.mLinkAudio.equals("")) {
             try {
                 mediafile.setDataSource(c, Uri.parse(audiofile));

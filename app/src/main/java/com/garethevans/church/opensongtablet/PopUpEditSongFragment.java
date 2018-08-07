@@ -2,11 +2,13 @@ package com.garethevans.church.opensongtablet;
 
 import android.app.Activity;
 import android.app.DialogFragment;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.support.v7.widget.SwitchCompat;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -24,8 +26,7 @@ import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -57,6 +58,9 @@ public class PopUpEditSongFragment extends DialogFragment implements PopUpPresen
     // Buttons
     Button toggleGeneralAdvanced, fix_lyrics;
     FloatingActionButton addBrackets;
+
+    StorageAccess storageAccess;
+    DocumentFile homeFolder;
 
     static int temposlider;
     View V;
@@ -104,6 +108,8 @@ public class PopUpEditSongFragment extends DialogFragment implements PopUpPresen
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        storageAccess = new StorageAccess();
+        homeFolder = storageAccess.getHomeFolder(getActivity());
         getDialog().requestWindowFeature(Window.FEATURE_NO_TITLE);
         getDialog().setCanceledOnTouchOutside(true);
         V = inflater.inflate(R.layout.popup_editsong, container, false);
@@ -492,7 +498,8 @@ public class PopUpEditSongFragment extends DialogFragment implements PopUpPresen
     public void cancelEdit() {
         // Load the song back up with the default values
         try {
-            LoadXML.loadXML(getActivity());
+            LoadXML loadXML = new LoadXML();
+            loadXML.loadXML(getActivity(), homeFolder);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -581,23 +588,14 @@ public class PopUpEditSongFragment extends DialogFragment implements PopUpPresen
 
         // Now write the modified song
         try {
-            FileOutputStream overWrite;
-            if (FullscreenActivity.whichSongFolder.equals(FullscreenActivity.mainfoldername)) {
-                overWrite = new FileOutputStream(
-                        FullscreenActivity.dir + "/" + FullscreenActivity.songfilename,
-                        false);
-            } else {
-                overWrite = new FileOutputStream(
-                        FullscreenActivity.dir + "/" + FullscreenActivity.whichSongFolder + "/" + FullscreenActivity.songfilename,
-                        false);
-            }
-            overWrite.write(FullscreenActivity.mynewXML.getBytes());
-            overWrite.flush();
-            overWrite.close();
+            OutputStream overWrite = storageAccess.getOutputStream(getActivity(), homeFolder,"Songs", FullscreenActivity.whichSongFolder,
+                    FullscreenActivity.songfilename);
+            storageAccess.writeBytes(getActivity(),overWrite,FullscreenActivity.mynewXML.getBytes());
 
             // If we are autologging CCLI information
             if (FullscreenActivity.ccli_automatic) {
-                PopUpCCLIFragment.addUsageEntryToLog(FullscreenActivity.whichSongFolder+"/"+FullscreenActivity.songfilename,
+                PopUpCCLIFragment popUpCCLIFragment = new PopUpCCLIFragment();
+                popUpCCLIFragment.addUsageEntryToLog(getActivity(),FullscreenActivity.whichSongFolder+"/"+FullscreenActivity.songfilename,
                         FullscreenActivity.mTitle.toString(), FullscreenActivity.mAuthor.toString(),
                         FullscreenActivity.mCopyright.toString(), FullscreenActivity.mCCLI, "3"); // Edited
             }
@@ -738,21 +736,16 @@ public class PopUpEditSongFragment extends DialogFragment implements PopUpPresen
         FullscreenActivity.mynewXML = myNEWXML;
     }
 
-    public static void justSaveSongXML() throws IOException {
+    public static void justSaveSongXML(Context c) {
         // Only do this if the title or song file doesn't identify it as the 'welcome to opensongapp' file
         if (!FullscreenActivity.mTitle.equals("Welcome to OpenSongApp") && !FullscreenActivity.mynewXML.contains("Welcome to OpenSongApp")) {
             // Now write the modified song
-            String filename;
-            if (FullscreenActivity.whichSongFolder.equals(FullscreenActivity.mainfoldername) || FullscreenActivity.whichSongFolder.isEmpty()) {
-                filename = FullscreenActivity.dir + "/" + FullscreenActivity.songfilename;
-            } else {
-                filename = FullscreenActivity.dir + "/" + FullscreenActivity.whichSongFolder + "/" + FullscreenActivity.songfilename;
-            }
-
-            FileOutputStream overWrite = new FileOutputStream(filename, false);
-            overWrite.write(FullscreenActivity.mynewXML.getBytes());
-            overWrite.flush();
-            overWrite.close();
+            StorageAccess storageAccess = new StorageAccess();
+            DocumentFile homeFolder = storageAccess.getHomeFolder(c);
+            OutputStream overWrite = storageAccess.getOutputStream(c, homeFolder,"Songs",
+                    FullscreenActivity.whichSongFolder,
+                    FullscreenActivity.songfilename);
+            storageAccess.writeBytes(c, overWrite, FullscreenActivity.mynewXML.getBytes());
         }
     }
 

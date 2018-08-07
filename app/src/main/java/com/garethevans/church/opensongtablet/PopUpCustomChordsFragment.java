@@ -8,6 +8,7 @@ import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,8 +23,7 @@ import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 
 public class PopUpCustomChordsFragment extends DialogFragment {
@@ -40,6 +40,7 @@ public class PopUpCustomChordsFragment extends DialogFragment {
     }
 
     private MyInterface mListener;
+
 
     @Override
     @SuppressWarnings("deprecation")
@@ -719,7 +720,7 @@ public class PopUpCustomChordsFragment extends DialogFragment {
                     deleteChord.setText(newtext);
                     deleteChord.setBackgroundDrawable(getResources().getDrawable(R.drawable.red_button));
                     deleteChord.setOnClickListener(new OnDelete(deleteChord));
-                    if (!workingChord.isEmpty() && !workingChord.equals("")) {
+                    if (!workingChord.isEmpty()) {
                         savedcustomchords.addView(chordvalue);
                         savedcustomchords.addView(deleteChord);
                     }
@@ -1758,24 +1759,12 @@ public class PopUpCustomChordsFragment extends DialogFragment {
 
     public void doSave() {
         // Add the custom chord code to the xml
-
-        FileOutputStream overWrite;
-        try {
-            if (FullscreenActivity.whichSongFolder.equals(FullscreenActivity.mainfoldername)) {
-                overWrite = new FileOutputStream(FullscreenActivity.dir + "/" + FullscreenActivity.songfilename,false);
-            } else {
-                overWrite = new FileOutputStream(FullscreenActivity.dir + "/" + FullscreenActivity.whichSongFolder + "/" + FullscreenActivity.songfilename,false);
-            }
-            overWrite.write(FullscreenActivity.mynewXML.getBytes());
-            overWrite.flush();
-            overWrite.close();
-            FullscreenActivity.myToastMessage = getResources().getString(R.string.ok);
-        } catch (IOException e) {
-            e.printStackTrace();
-            FullscreenActivity.myToastMessage = getResources().getString(R.string.no);
-        }
-        ShowToast.showToast(getActivity());
-
+        StorageAccess storageAccess = new StorageAccess();
+        DocumentFile homeFolder = storageAccess.getHomeFolder(getActivity());
+        OutputStream overWrite = storageAccess.getOutputStream(getActivity(),homeFolder,
+                "Songs",FullscreenActivity.whichSongFolder,
+                FullscreenActivity.songfilename);
+        storageAccess.writeBytes(getActivity(), overWrite, FullscreenActivity.mynewXML.getBytes());
     }
 
     private class OnDelete implements View.OnClickListener {

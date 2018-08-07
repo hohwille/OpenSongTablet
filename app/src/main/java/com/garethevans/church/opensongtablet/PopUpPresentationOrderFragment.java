@@ -6,6 +6,7 @@ import android.content.DialogInterface;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,8 +14,6 @@ import android.view.Window;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-
-import java.io.IOException;
 
 public class PopUpPresentationOrderFragment extends DialogFragment {
 
@@ -66,12 +65,17 @@ public class PopUpPresentationOrderFragment extends DialogFragment {
     LinearLayout root_buttonshere;
     Button deletePresOrder;
 
+    StorageAccess storageAccess;
+    DocumentFile homeFolder;
+
     @SuppressWarnings("deprecation")
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         getDialog().requestWindowFeature(Window.FEATURE_NO_TITLE);
         getDialog().setCanceledOnTouchOutside(true);
 
+        storageAccess = new StorageAccess();
+        homeFolder = storageAccess.getHomeFolder(getActivity());
         View V = inflater.inflate(R.layout.popup_presentation_order, container, false);
 
         TextView title = V.findViewById(R.id.dialogtitle);
@@ -156,15 +160,16 @@ public class PopUpPresentationOrderFragment extends DialogFragment {
         FullscreenActivity.mPresentation = m_mPresentation.getText().toString().trim();
         PopUpEditSongFragment.prepareSongXML();
         try {
-            PopUpEditSongFragment.justSaveSongXML();
-        } catch (IOException e) {
+            PopUpEditSongFragment.justSaveSongXML(getActivity());
+        } catch (Exception e) {
             e.printStackTrace();
             FullscreenActivity.myToastMessage = getActivity().getResources().getString(R.string.savesong) + " - " +
                     getActivity().getResources().getString(R.string.error);
             ShowToast.showToast(getActivity());
         }
        try {
-           LoadXML.loadXML(getActivity());
+            LoadXML loadXML = new LoadXML();
+           loadXML.loadXML(getActivity(),homeFolder);
        } catch (Exception e) {
            e.printStackTrace();
        }

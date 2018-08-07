@@ -6,7 +6,7 @@ class TextSongConvert {
 
     // This class is called from the edit song window - try to convert to fix OpenSong format button
     static String convertText(Context c, String oldtext) {
-        String newtext = "";
+        StringBuilder newtext = new StringBuilder();
 
         // Split the whole thing into lines
         String[] lines = oldtext.split("\n");
@@ -76,18 +76,18 @@ class TextSongConvert {
                 }
             }
             // Add the lines back
-            newtext += l+"\n";
+            newtext.append(l).append("\n");
         }
 
         // Remove any blank headings if they are redundant
-        newtext = newtext.replace("[]\n[","[");
-        newtext = newtext.replace("[]\n\n[","[");
-        newtext = newtext.replace("[]\n \n[","[");
+        newtext = new StringBuilder(newtext.toString().replace("[]\n[", "["));
+        newtext = new StringBuilder(newtext.toString().replace("[]\n\n[", "["));
+        newtext = new StringBuilder(newtext.toString().replace("[]\n \n[", "["));
 
         // If there isn't any tags declared, set up a verse tag
-        if (!newtext.contains("[")) {
-            newtext = "["+c.getString(R.string.tag_verse)+"]";
+        if (!newtext.toString().contains("[")) {
+            newtext = new StringBuilder("[" + c.getString(R.string.tag_verse) + "]");
         }
-        return newtext;
+        return newtext.toString();
     }
 }

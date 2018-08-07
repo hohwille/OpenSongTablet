@@ -3,9 +3,9 @@ package com.garethevans.church.opensongtablet;
 import android.app.Activity;
 import android.app.DialogFragment;
 import android.content.DialogInterface;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.support.v7.widget.SwitchCompat;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,7 +19,6 @@ import android.widget.Spinner;
 import android.widget.TableLayout;
 import android.widget.TextView;
 
-import java.io.File;
 import java.util.ArrayList;
 
 public class PopUpFontsFragment extends DialogFragment {
@@ -63,6 +62,10 @@ public class PopUpFontsFragment extends DialogFragment {
     TableLayout songPreview;
     SwitchCompat trimlines_SwitchCompat, trimsections_SwitchCompat, hideBox_SwitchCompat;
 
+    StorageAccess storageAccess;
+    DocumentFile homeFolder;
+    SetTypeFace setTypeFace;
+
     @Override
     public void onStart() {
         super.onStart();
@@ -86,6 +89,10 @@ public class PopUpFontsFragment extends DialogFragment {
         getDialog().requestWindowFeature(Window.FEATURE_NO_TITLE);
         getDialog().setCanceledOnTouchOutside(true);
         View V = inflater.inflate(R.layout.popup_font, container, false);
+
+        storageAccess = new StorageAccess();
+        homeFolder = storageAccess.getHomeFolder(getActivity());
+        setTypeFace = new SetTypeFace();
 
         TextView title = V.findViewById(R.id.dialogtitle);
         title.setText(getActivity().getResources().getString(R.string.options_options_fonts));
@@ -134,7 +141,7 @@ public class PopUpFontsFragment extends DialogFragment {
         trimsections_SwitchCompat = V.findViewById(R.id.trimsections_SwitchCompat);
 
         // Set up the typefaces
-        SetTypeFace.setTypeface();
+        setTypeFace.setTypeface(getActivity(), homeFolder);
 
         // Set the lyrics and chord font preview to what they should look like
         headingPreview.setTextSize(12*FullscreenActivity.headingfontscalesize);
@@ -147,11 +154,9 @@ public class PopUpFontsFragment extends DialogFragment {
         lyricsPreview2.setPadding(0, -(int) ((float) temp_linespacing / 3.0f), 0, 0);
         chordPreview1.setPadding(0, -(int) ((float) temp_linespacing / 3.0f), 0, 0);
         chordPreview2.setPadding(0, -(int) ((float) temp_linespacing / 3.0f), 0, 0);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            trimlines_SwitchCompat.setChecked(FullscreenActivity.trimSections);
-            hideBox_SwitchCompat.setChecked(FullscreenActivity.hideLyricsBox);
-            trimsections_SwitchCompat.setChecked(!FullscreenActivity.trimSectionSpace);
-        }
+        trimlines_SwitchCompat.setChecked(FullscreenActivity.trimSections);
+        hideBox_SwitchCompat.setChecked(FullscreenActivity.hideLyricsBox);
+        trimsections_SwitchCompat.setChecked(!FullscreenActivity.trimSectionSpace);
         ArrayList<String> font_choices = new ArrayList<>();
         font_choices.add(getResources().getString(R.string.font_default));
         font_choices.add(getResources().getString(R.string.font_monospace));
@@ -181,11 +186,12 @@ public class PopUpFontsFragment extends DialogFragment {
         lyricnchordsPreviewUpdate();
 
         // Set up the custom fonts
-        File[] customfontscontents = FullscreenActivity.dirfonts.listFiles();
+        DocumentFile dirfonts = storageAccess.tryCreateDirectory(getActivity(),homeFolder,"Fonts","");
+        DocumentFile[] customfontscontents = dirfonts.listFiles();
         ArrayList<String> customfontsavail = new ArrayList<>();
         customfontsavail.add("");
 
-        for (File cf : customfontscontents) {
+        for (DocumentFile cf : customfontscontents) {
             String fn = cf.getName();
             if (fn.endsWith(".ttf") || fn.endsWith(".otf")) {
                 customfontsavail.add(fn);
@@ -201,8 +207,9 @@ public class PopUpFontsFragment extends DialogFragment {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 FullscreenActivity.customfontname = choose_customfonts.getItem(i);
-                FullscreenActivity.customfont = SetTypeFace.setCustomFont(choose_customfonts.getItem(i));
-                SetTypeFace.setTypeface();
+                FullscreenActivity.customfont = setTypeFace.setCustomFont(getActivity(), homeFolder,
+                        choose_customfonts.getItem(i));
+                setTypeFace.setTypeface(getActivity(), homeFolder);
                 Preferences.savePreferences();
             }
 
@@ -242,7 +249,7 @@ public class PopUpFontsFragment extends DialogFragment {
                 temp_mypresofontnum = position;
                 FullscreenActivity.mypresofontnum = position;
                 Preferences.savePreferences();
-                SetTypeFace.setTypeface();
+                setTypeFace.setTypeface(getActivity(), homeFolder);
                 if (mListener!=null) {
                     mListener.refreshSecondaryDisplay("all");
                 }
@@ -259,7 +266,7 @@ public class PopUpFontsFragment extends DialogFragment {
                 temp_mypresoinfofontnum = position;
                 FullscreenActivity.mypresoinfofontnum = position;
                 Preferences.savePreferences();
-                SetTypeFace.setTypeface();
+                setTypeFace.setTypeface(getActivity(), homeFolder);
                 if (mListener!=null) {
                     mListener.refreshSecondaryDisplay("all");
                 }

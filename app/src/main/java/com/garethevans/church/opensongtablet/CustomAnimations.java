@@ -139,7 +139,15 @@ class CustomAnimations {
         return aa;
     }
 
-    static void highlightAction(View v, Context c) {
+    void highlightAction(Context c, View v) {
+        try {
+            v.startAnimation(AnimationUtils.loadAnimation(c, R.anim.capopulse));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    void pulse(Context c, View v) {
         try {
             v.startAnimation(AnimationUtils.loadAnimation(c, R.anim.pulse));
         } catch (Exception e) {

@@ -1,14 +1,14 @@
 package com.garethevans.church.opensongtablet;
 
+import android.content.Context;
 import android.graphics.Typeface;
-
-import java.io.File;
+import android.support.v4.provider.DocumentFile;
 
 class SetTypeFace {
 
-    public static void setTypeface() {
+    public void setTypeface(Context c, DocumentFile homeFolder) {
         // Set up the custom font (if it has been set)
-        FullscreenActivity.customfont = setCustomFont(FullscreenActivity.customfontname);
+        FullscreenActivity.customfont = setCustomFont(c, homeFolder, FullscreenActivity.customfontname);
 
         switch (FullscreenActivity.mylyricsfontnum) {
             case 1:
@@ -206,12 +206,12 @@ class SetTypeFace {
 
     }
 
-    static Typeface setCustomFont(String ff) {
+    Typeface setCustomFont(Context c, DocumentFile homeFolder, String ff) {
         Typeface tf = FullscreenActivity.typeface0;
-        String fl = FullscreenActivity.dirfonts + "/" + ff;
-        File cf = new File(fl);
+        StorageAccess sa = new StorageAccess();
+        DocumentFile cf = sa.getFileLocationAsDocumentFile(c,homeFolder,"Fonts", "", ff);
         if (cf.exists() && (ff.endsWith(".ttf") || ff.endsWith(".otf"))) {
-            tf = Typeface.createFromFile(cf);
+            tf = Typeface.createFromFile(cf.getUri().getPath());
         } else {
             FullscreenActivity.customfontname = "";
             Preferences.savePreferences();
@@ -219,7 +219,7 @@ class SetTypeFace {
         return tf;
     }
 
-    static String setupWebViewLyricFont(int fontnum) {
+    String setupWebViewLyricFont(int fontnum) {
 
         String fontcode = "";
 
@@ -313,7 +313,7 @@ class SetTypeFace {
         return fontcode;
     }
 
-    static String setupWebViewChordFont(int fontnum) {
+    String setupWebViewChordFont(int fontnum) {
 
         String fontcode = "";
         boolean already = false;

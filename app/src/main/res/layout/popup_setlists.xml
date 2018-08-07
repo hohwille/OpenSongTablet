@@ -7,6 +7,13 @@
     android:orientation="vertical"
     android:weightSum="1">
 
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:visibility="visible" />
+
     <FrameLayout
         android:id="@+id/myTitle"
         android:layout_width="match_parent"
@@ -33,7 +40,7 @@
                 android:id="@+id/sort_ImageButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignParentLeft="true"
+                android:layout_alignParentStart="true"
                 android:layout_alignParentTop="true"
                 android:layout_margin="0dp"
                 android:src="@drawable/ic_sort_white_36dp"
@@ -45,7 +52,6 @@
                 android:id="@+id/setListView1"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_alignParentLeft="false"
                 android:layout_alignParentStart="false"
                 android:layout_margin="8dp"
                 android:background="@drawable/section_box"
@@ -117,28 +123,29 @@
                             style="@style/MySpinner"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_alignParentLeft="true"
+                            android:layout_alignParentStart="true"
                             android:layout_alignParentTop="true"
                             android:layout_margin="8dp"
-                            android:layout_toLeftOf="@+id/newCategory_ImageButton" />
+                            android:layout_toStartOf="@+id/newCategory_ImageButton" />
 
                         <EditText
                             android:id="@+id/newCategory_EditText"
                             style="@style/MyEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_alignParentLeft="true"
+                            android:layout_alignParentStart="true"
                             android:layout_alignParentTop="true"
                             android:layout_margin="8dp"
-                            android:layout_toLeftOf="@+id/newCategory_ImageButton"
+                            android:layout_toStartOf="@+id/newCategory_ImageButton"
                             android:hint="@string/category"
+                            android:inputType="text|textNoSuggestions"
                             android:maxLines="1" />
 
                         <ImageButton
                             android:id="@+id/newCategory_ImageButton"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_alignParentRight="true"
+                            android:layout_alignParentEnd="true"
                             android:layout_alignParentTop="true"
                             android:contentDescription="@string/category"
                             android:src="@drawable/ic_plus_white_36dp" />
@@ -170,7 +177,8 @@
                         android:layout_height="wrap_content"
                         android:layout_margin="8dp"
                         android:hint="@string/options_set_nameofset"
-                        android:maxLines="1" />
+                        android:maxLines="1"
+                        android:inputType="text" />
 
                     <CheckBox
                         android:id="@+id/overWrite_CheckBox"

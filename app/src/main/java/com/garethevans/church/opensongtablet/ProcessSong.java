@@ -12,8 +12,10 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.pdf.PdfRenderer;
 import android.media.ThumbnailUtils;
+import android.net.Uri;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
+import android.support.v4.provider.DocumentFile;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
@@ -25,8 +27,6 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -127,7 +127,7 @@ public class ProcessSong extends Activity {
     }
 
     static String fixStartOfLines(String lyrics) {
-        String fixedlyrics = "";
+        StringBuilder fixedlyrics = new StringBuilder();
         String[] lines = lyrics.split("\n");
 
         for (String line:lines) {
@@ -137,9 +137,9 @@ public class ProcessSong extends Activity {
                     !line.startsWith("9")) {
                 line = " " + line;
             }
-            fixedlyrics += line + "\n";
+            fixedlyrics.append(line).append("\n");
         }
-        return fixedlyrics;
+        return fixedlyrics.toString();
     }
 
     static String fixlinebreaks(String string) {
@@ -155,8 +155,8 @@ public class ProcessSong extends Activity {
         // Go through the lines and remove underscores if the line isn't an image location
         // Split the lyrics into a line by line array so we can fix individual lines
         String[] lineLyrics = myLyrics.split("\n");
-        myLyrics = "";
-        for (int l=0;l<lineLyrics.length;l++) {
+        StringBuilder myLyricsBuilder = new StringBuilder();
+        for (int l = 0; l<lineLyrics.length; l++) {
 
             if (lineLyrics[l].contains("_")) {
                 if (l>0 && !lineLyrics[l].contains("["+c.getResources().getString(R.string.image)+"_") &&
@@ -181,24 +181,25 @@ public class ProcessSong extends Activity {
                     }
                 }
             }
-            myLyrics += lineLyrics[l] + "\n";
+            myLyricsBuilder.append(lineLyrics[l]).append("\n");
         }
+        myLyrics = myLyricsBuilder.toString();
         return myLyrics;
     }
 
     static String rebuildParsedLyrics(int length) {
-        String tempLyrics = "";
+        StringBuilder tempLyrics = new StringBuilder();
         for (int x = 0; x < length; x++) {
             // First line of section should be the label, so replace it with label.
             if (FullscreenActivity.songSections[x].startsWith("[" + FullscreenActivity.songSectionsLabels[x] + "]")) {
-                tempLyrics += FullscreenActivity.songSections[x] + "\n";
+                tempLyrics.append(FullscreenActivity.songSections[x]).append("\n");
             } else {
-                tempLyrics += FullscreenActivity.songSections[x] + "\n";
+                tempLyrics.append(FullscreenActivity.songSections[x]).append("\n");
             }
         }
-        FullscreenActivity.myParsedLyrics = tempLyrics.split("\n");
+        FullscreenActivity.myParsedLyrics = tempLyrics.toString().split("\n");
 
-        return tempLyrics;
+        return tempLyrics.toString();
     }
 
     static void lookForSplitPoints() {
@@ -374,10 +375,12 @@ public class ProcessSong extends Activity {
         FullscreenActivity.twothirdsplit_section = twothirdsplit_section;
     }
 
-    static String validCustomPadString(String s, String c) {
+    static String validCustomPadString(Context ctx, String s, String c) {
         if (c!=null) {
+            StorageAccess storageAccess = new StorageAccess();
+            DocumentFile homeFolder = storageAccess.getHomeFolder(ctx);
             // Null is the built in auto pad.  So, not using that.  Test it exists.
-            File f = new File (FullscreenActivity.dirPads,c);
+            DocumentFile f = storageAccess.getFileLocationAsDocumentFile(ctx,homeFolder,"Pads","",c);
             if (f.exists() && f.isFile()) {
                 s = "custom_" + c;
             }
@@ -385,142 +388,142 @@ public class ProcessSong extends Activity {
         return s;
     }
 
-    static void processKey() {
+    static void processKey(Context c) {
         switch (FullscreenActivity.mKey) {
             case "A":
-                FullscreenActivity.pad_filename = validCustomPadString("a", FullscreenActivity.customPadA);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "a", FullscreenActivity.customPadA);
                 FullscreenActivity.keyindex = 1;
                 break;
             case "A#":
-                FullscreenActivity.pad_filename = validCustomPadString("asharp", FullscreenActivity.customPadBb);
+                FullscreenActivity.pad_filename = validCustomPadString(c,"asharp", FullscreenActivity.customPadBb);
                 FullscreenActivity.keyindex = 2;
                 break;
             case "Bb":
-                FullscreenActivity.pad_filename = validCustomPadString("asharp", FullscreenActivity.customPadBb);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "asharp", FullscreenActivity.customPadBb);
                 FullscreenActivity.keyindex = 3;
                 break;
             case "B":
-                FullscreenActivity.pad_filename = validCustomPadString("b", FullscreenActivity.customPadB);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "b", FullscreenActivity.customPadB);
                 FullscreenActivity.keyindex = 4;
                 break;
             case "C":
-                FullscreenActivity.pad_filename = validCustomPadString("c", FullscreenActivity.customPadC);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "c", FullscreenActivity.customPadC);
                 FullscreenActivity.keyindex = 5;
                 break;
             case "C#":
-                FullscreenActivity.pad_filename = validCustomPadString("csharp", FullscreenActivity.customPadDb);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "csharp", FullscreenActivity.customPadDb);
                 FullscreenActivity.keyindex = 6;
                 break;
             case "Db":
-                FullscreenActivity.pad_filename = validCustomPadString("csharp", FullscreenActivity.customPadDb);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "csharp", FullscreenActivity.customPadDb);
                 FullscreenActivity.keyindex = 7;
                 break;
             case "D":
-                FullscreenActivity.pad_filename = validCustomPadString("d", FullscreenActivity.customPadD);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "d", FullscreenActivity.customPadD);
                 FullscreenActivity.keyindex = 8;
                 break;
             case "D#":
-                FullscreenActivity.pad_filename = validCustomPadString("dsharp", FullscreenActivity.customPadEb);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "dsharp", FullscreenActivity.customPadEb);
                 FullscreenActivity.keyindex = 9;
                 break;
             case "Eb":
-                FullscreenActivity.pad_filename = validCustomPadString("dsharp", FullscreenActivity.customPadEb);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "dsharp", FullscreenActivity.customPadEb);
                 FullscreenActivity.keyindex = 10;
                 break;
             case "E":
-                FullscreenActivity.pad_filename = validCustomPadString("e", FullscreenActivity.customPadE);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "e", FullscreenActivity.customPadE);
                 FullscreenActivity.keyindex = 11;
                 break;
             case "F":
-                FullscreenActivity.pad_filename = validCustomPadString("f", FullscreenActivity.customPadF);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "f", FullscreenActivity.customPadF);
                 FullscreenActivity.keyindex = 12;
                 break;
             case "F#":
-                FullscreenActivity.pad_filename = validCustomPadString("fsharp", FullscreenActivity.customPadGb);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "fsharp", FullscreenActivity.customPadGb);
                 FullscreenActivity.keyindex = 13;
                 break;
             case "Gb":
-                FullscreenActivity.pad_filename = validCustomPadString("fsharp", FullscreenActivity.customPadGb);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "fsharp", FullscreenActivity.customPadGb);
                 FullscreenActivity.keyindex = 14;
                 break;
             case "G":
-                FullscreenActivity.pad_filename = validCustomPadString("g", FullscreenActivity.customPadG);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "g", FullscreenActivity.customPadG);
                 FullscreenActivity.keyindex = 15;
                 break;
             case "G#":
-                FullscreenActivity.pad_filename = validCustomPadString("gsharp", FullscreenActivity.customPadAb);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "gsharp", FullscreenActivity.customPadAb);
                 FullscreenActivity.keyindex = 16;
                 break;
             case "Ab":
-                FullscreenActivity.pad_filename = validCustomPadString("gsharp", FullscreenActivity.customPadAb);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "gsharp", FullscreenActivity.customPadAb);
                 FullscreenActivity.keyindex = 17;
                 break;
             case "Am":
-                FullscreenActivity.pad_filename = validCustomPadString("am", FullscreenActivity.customPadAm);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "am", FullscreenActivity.customPadAm);
                 FullscreenActivity.keyindex = 18;
                 break;
             case "A#m":
-                FullscreenActivity.pad_filename = validCustomPadString("asharpm", FullscreenActivity.customPadBbm);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "asharpm", FullscreenActivity.customPadBbm);
                 FullscreenActivity.keyindex = 19;
                 break;
             case "Bbm":
-                FullscreenActivity.pad_filename = validCustomPadString("asharpm", FullscreenActivity.customPadBbm);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "asharpm", FullscreenActivity.customPadBbm);
                 FullscreenActivity.keyindex = 20;
                 break;
             case "Bm":
-                FullscreenActivity.pad_filename = validCustomPadString("bm", FullscreenActivity.customPadBm);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "bm", FullscreenActivity.customPadBm);
                 FullscreenActivity.keyindex = 21;
                 break;
             case "Cm":
-                FullscreenActivity.pad_filename = validCustomPadString("cm", FullscreenActivity.customPadCm);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "cm", FullscreenActivity.customPadCm);
                 FullscreenActivity.keyindex = 22;
                 break;
             case "C#m":
-                FullscreenActivity.pad_filename = validCustomPadString("csharpm", FullscreenActivity.customPadDbm);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "csharpm", FullscreenActivity.customPadDbm);
                 FullscreenActivity.keyindex = 23;
                 break;
             case "Dbm":
-                FullscreenActivity.pad_filename = validCustomPadString("csharpm", FullscreenActivity.customPadDbm);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "csharpm", FullscreenActivity.customPadDbm);
                 FullscreenActivity.keyindex = 24;
                 break;
             case "Dm":
-                FullscreenActivity.pad_filename = validCustomPadString("dm", FullscreenActivity.customPadDm);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "dm", FullscreenActivity.customPadDm);
                 FullscreenActivity.keyindex = 25;
                 break;
             case "D#m":
-                FullscreenActivity.pad_filename = validCustomPadString("dsharpm", FullscreenActivity.customPadEbm);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "dsharpm", FullscreenActivity.customPadEbm);
                 FullscreenActivity.keyindex = 26;
                 break;
             case "Ebm":
-                FullscreenActivity.pad_filename = validCustomPadString("dsharpm", FullscreenActivity.customPadEbm);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "dsharpm", FullscreenActivity.customPadEbm);
                 FullscreenActivity.keyindex = 27;
                 break;
             case "Em":
-                FullscreenActivity.pad_filename = validCustomPadString("em", FullscreenActivity.customPadEm);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "em", FullscreenActivity.customPadEm);
                 FullscreenActivity.keyindex = 28;
                 break;
             case "Fm":
-                FullscreenActivity.pad_filename = validCustomPadString("fm", FullscreenActivity.customPadFm);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "fm", FullscreenActivity.customPadFm);
                 FullscreenActivity.keyindex = 29;
                 break;
             case "F#m":
-                FullscreenActivity.pad_filename = validCustomPadString("fsharpm", FullscreenActivity.customPadGbm);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "fsharpm", FullscreenActivity.customPadGbm);
                 FullscreenActivity.keyindex = 30;
                 break;
             case "Gbm":
-                FullscreenActivity.pad_filename = validCustomPadString("fsharpm", FullscreenActivity.customPadGbm);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "fsharpm", FullscreenActivity.customPadGbm);
                 FullscreenActivity.keyindex = 31;
                 break;
             case "Gm":
-                FullscreenActivity.pad_filename = validCustomPadString("gm", FullscreenActivity.customPadGm);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "gm", FullscreenActivity.customPadGm);
                 FullscreenActivity.keyindex = 32;
                 break;
             case "G#m":
-                FullscreenActivity.pad_filename = validCustomPadString("gsharpm", FullscreenActivity.customPadAbm);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "gsharpm", FullscreenActivity.customPadAbm);
                 FullscreenActivity.keyindex = 33;
                 break;
             case "Abm":
-                FullscreenActivity.pad_filename = validCustomPadString("gsharpm", FullscreenActivity.customPadAbm);
+                FullscreenActivity.pad_filename = validCustomPadString(c, "gsharpm", FullscreenActivity.customPadAbm);
                 FullscreenActivity.keyindex = 34;
                 break;
             default:
@@ -632,7 +635,7 @@ public class ProcessSong extends Activity {
         }
         return i;
     }
-    static String getSalutReceivedLocation(String string, Context c) {
+    static String getSalutReceivedLocation(Context c, DocumentFile homeFolder, String string) {
         String[] s;
         string = string.replace("{\"description\":\"","");
         string = string.replace("\"}","");
@@ -641,14 +644,9 @@ public class ProcessSong extends Activity {
             // We have a song location!
             s = string.split("_____");
             // Check the song exists
-            File testfile;
-            if (s[0].equals(FullscreenActivity.mainfoldername)) {
-                testfile = new File(FullscreenActivity.dir + "/" + s[1]);
-                exists = testfile.exists();
-            } else {
-                testfile = new File(FullscreenActivity.dir + "/" + s[0] + "/" + s[1]);
-                exists = testfile.exists();
-            }
+            StorageAccess sa = new StorageAccess();
+            DocumentFile testfile = sa.getFileLocationAsDocumentFile(c,homeFolder,"Songs",s[0],s[1]);
+            exists = testfile.exists();
 
             if (exists && s.length == 3 && s[0] != null && s[1] != null && s[2] != null) {
                 FullscreenActivity.whichSongFolder = s[0];
@@ -790,16 +788,14 @@ public class ProcessSong extends Activity {
                 thischarempty = true;
             }
 
-            String prevchar = "";
+            String prevchar;
             boolean prevcharempty = false;
-            if (x>0) {
-                prevchar = string.substring(x-1,x);
-            }
-            if (prevchar.equals(" ") || prevchar.equals("|") || x==0) {
+            prevchar = string.substring(x-1,x);
+            if (prevchar.equals(" ") || prevchar.equals("|")) {
                 prevcharempty = true;
             }
 
-            if ((!thischarempty && prevcharempty) || (thischarempty && x==0)) {
+            if (!thischarempty && prevcharempty) {
                 // This is a chord position
                 chordpositions.add(x + "");
             }
@@ -1027,7 +1023,7 @@ public class ProcessSong extends Activity {
     }
 
     @SuppressWarnings("deprecation")
-    private static TableRow lyriclinetoTableRow(Context c, String[] lyrics, float fontsize) {
+    private static TableRow lyriclinetoTableRow(Context c, DocumentFile homeFolder, String[] lyrics, float fontsize) {
         TableRow lyricrow = new TableRow(c);
         if (FullscreenActivity.whichMode.equals("Presentation") && FullscreenActivity.scalingfiguredout &&
                 !FullscreenActivity.presoShowChords) {
@@ -1045,8 +1041,9 @@ public class ProcessSong extends Activity {
         for (String bit:lyrics) {
             String imagetext;
             if (bit.contains("/Images/_cache/")) {
+                Uri uri = Uri.parse(bit);
+                imagetext = uri.getLastPathSegment();
                 FullscreenActivity.isImageSection = true;
-                imagetext = bit;
 
             } else {
                 imagetext = "";
@@ -1125,7 +1122,8 @@ public class ProcessSong extends Activity {
                 img.setMaxWidth(maxwidth);
                 img.setMaxHeight(maxwidth);
 
-                File checkfile = new File(imagetext);
+                StorageAccess sa = new StorageAccess();
+                DocumentFile checkfile = sa.getFileLocationAsDocumentFile(c, homeFolder, "Images", "_cache", imagetext);
                 if (checkfile.exists()) {
                     try {
                         BitmapFactory.Options options = new BitmapFactory.Options();
@@ -1299,11 +1297,11 @@ public class ProcessSong extends Activity {
 
     @SuppressWarnings("unused")
     public static String lyriclinetoHTML(String[] lyrics) {
-        String lyrichtml = "";
+        StringBuilder lyrichtml = new StringBuilder();
         for (String bit:lyrics) {
-            lyrichtml += "<td class=\"lyric\">"+bit.replace(" ","&nbsp;")+"</td>";
+            lyrichtml.append("<td class=\"lyric\">").append(bit.replace(" ", "&nbsp;")).append("</td>");
         }
-        return lyrichtml;
+        return lyrichtml.toString();
     }
 
     private static String[] beautifyHeadings(String string, Context c) {
@@ -1483,14 +1481,17 @@ public class ProcessSong extends Activity {
 
     static String fixLineLength(String string, int newlength) {
         int extraspacesrequired = newlength - string.length();
-        for (int x=0; x<extraspacesrequired; x++) {
-            string += " ";
+        StringBuilder stringBuilder = new StringBuilder(string);
+        for (int x = 0; x<extraspacesrequired; x++) {
+            stringBuilder.append(" ");
         }
+        string = stringBuilder.toString();
         return string;
     }
 
     @SuppressWarnings("unused")
     public static String songHTML (String string) {
+        SetTypeFace setTypeFace = new SetTypeFace();
         return  "" +
                 "<html>\n" +
                 "<head>\n" +
@@ -1498,8 +1499,8 @@ public class ProcessSong extends Activity {
                 ".page       {background-color:" + String.format("#%06X", (0xFFFFFF & FullscreenActivity.lyricsBackgroundColor)) + ";}\n" +
                 ".heading    {color:" + String.format("#%06X", (0xFFFFFF & FullscreenActivity.lyricsTextColor)) + "; text-decoration:underline}\n" +
                 ".lyrictable {border-spacing:0; border-collapse: collapse; border:0px;}\n" +
-                SetTypeFace.setupWebViewLyricFont(FullscreenActivity.mylyricsfontnum) +
-                SetTypeFace.setupWebViewChordFont(FullscreenActivity.mychordsfontnum) +
+                setTypeFace.setupWebViewLyricFont(FullscreenActivity.mylyricsfontnum) +
+                setTypeFace.setupWebViewChordFont(FullscreenActivity.mychordsfontnum) +
                 "</style>\n" +
                 "</head>\n" +
                 "<body class=\"page\"\">\n" +
@@ -1583,8 +1584,8 @@ public class ProcessSong extends Activity {
                     String[] verse = {"", "", "", "", "", "", "", "", ""};
                     String[] chorus = {"", "", "", "", "", "", "", "", ""};
 
-                    String versechords = "";
-                    String choruschords = "";
+                    StringBuilder versechords = new StringBuilder();
+                    StringBuilder choruschords = new StringBuilder();
 
                     // Split the string into separate lines
                     String[] lines = string.split("\n");
@@ -1646,7 +1647,7 @@ public class ProcessSong extends Activity {
 
                         if (gettingverse) {
                             if (lines[z].startsWith(".")) {
-                                versechords += lines[z] + "\n";
+                                versechords.append(lines[z]).append("\n");
                                 lines[z] = "__REMOVED__";
                             } else if (Character.isDigit((lines[z] + " ").charAt(0))) {
                                 int vnum = Integer.parseInt((lines[z] + " ").substring(0, 1));
@@ -1658,7 +1659,7 @@ public class ProcessSong extends Activity {
                             }
                         } else if (gettingchorus) {
                             if (lines[z].startsWith(".")) {
-                                choruschords += lines[z] + "\n";
+                                choruschords.append(lines[z]).append("\n");
                                 lines[z] = "__REMOVED__";
                             } else if (Character.isDigit((lines[z] + " ").charAt(0))) {
                                 int cnum = Integer.parseInt((lines[z] + " ").substring(0, 1));
@@ -1672,11 +1673,11 @@ public class ProcessSong extends Activity {
                     }
 
                     // Get the replacement text
-                    String versereplacement = addchordstomultiline(verse, versechords);
-                    String chorusreplacement = addchordstomultiline(chorus, choruschords);
+                    String versereplacement = addchordstomultiline(verse, versechords.toString());
+                    String chorusreplacement = addchordstomultiline(chorus, choruschords.toString());
 
                     // Now go back through the lines and extract the new improved version
-                    String improvedlyrics = "";
+                    StringBuilder improvedlyrics = new StringBuilder();
                     for (String thisline : lines) {
                         if (thisline.equals("__VERSEMULTILINE__")) {
                             thisline = versereplacement;
@@ -1684,11 +1685,11 @@ public class ProcessSong extends Activity {
                             thisline = chorusreplacement;
                         }
                         if (!thisline.equals("__REMOVED__")) {
-                            improvedlyrics += thisline + "\n";
+                            improvedlyrics.append(thisline).append("\n");
                         }
                     }
 
-                    return improvedlyrics;
+                    return improvedlyrics.toString();
                 } else {
                     // Not multiline format
                     return string;
@@ -1743,63 +1744,63 @@ public class ProcessSong extends Activity {
     static String removeChordLines(String song) {
         // Split the song into separate lines
         String[] lines = song.split("\n");
-        String newsong = "";
+        StringBuilder newsong = new StringBuilder();
 
         for (String thisline:lines) {
             if (!thisline.startsWith(".")) {
-                newsong += thisline + "\n";
+                newsong.append(thisline).append("\n");
             }
         }
-        return newsong;
+        return newsong.toString();
     }
 
     static String getAllChords(String song) {
         // Split the song into separate lines
         String[] lines = song.split("\n");
-        String chordsonly = "";
+        StringBuilder chordsonly = new StringBuilder();
 
         for (String thisline:lines) {
             if (thisline.startsWith(".")) {
-                chordsonly += thisline + " ";
+                chordsonly.append(thisline).append(" ");
             }
         }
-        return chordsonly.replace("."," ");
+        return chordsonly.toString().replace("."," ");
     }
 
     static String removeCommentLines(String song) {
         // Split the song into separate lines
         String[] lines = song.split("\n");
-        String newsong = "";
+        StringBuilder newsong = new StringBuilder();
 
         for (String thisline:lines) {
             if (!thisline.startsWith(";")) {
-                newsong += thisline + "\n";
+                newsong.append(thisline).append("\n");
             }
         }
-        return newsong;
+        return newsong.toString();
 
     }
 
     private static String addchordstomultiline(String[] multiline, String chords) {
         String[] chordlines = chords.split("\n");
-        String replacementtext = "";
+        StringBuilder replacementtext = new StringBuilder();
 
         // Go through each verse/chorus in turn
         for (String sections:multiline) {
             String[] section = sections.split("\n");
 
             if (section.length == chordlines.length+1) {
-                replacementtext += section[0] + "\n";
+                replacementtext.append(section[0]).append("\n");
                 // Only works if there are the same number of lyric lines as chords!
                 for (int x=0; x<chordlines.length; x++) {
-                    replacementtext += chordlines[x]+"\n"+section[x+1]+"\n";
+                    replacementtext.append(chordlines[x]).append("\n").append(section[x + 1]).append("\n");
                 }
-                replacementtext += "\n";
+                replacementtext.append("\n");
             } else {
-                replacementtext += sections+"\n";
+                replacementtext.append(sections).append("\n");
             }
         }
-        return replacementtext;
+        return replacementtext.toString();
     }
 
     static String[] splitSongIntoSections(String song, Context c) {
@@ -1818,7 +1819,7 @@ public class ProcessSong extends Activity {
         }
 
         String[] temp = song.split("\n");
-        song = "";
+        StringBuilder songBuilder = new StringBuilder();
         for (String t:temp) {
             if (!t.startsWith(";") && !t.startsWith(".")) {
                 if (t.trim().startsWith("---")) {
@@ -1828,39 +1829,42 @@ public class ProcessSong extends Activity {
             }
 
             if (t.startsWith(".")||t.startsWith(";")) {
-                song += t + "\n";
+                songBuilder.append(t).append("\n");
             } else {
                 if (FullscreenActivity.whichMode.equals("Presentation") && !FullscreenActivity.presoShowChords) {
-                    song += t.replace("|", "\n") + "\n";
+                    songBuilder.append(t.replace("|", "\n")).append("\n");
                 } else if (FullscreenActivity.whichMode.equals("Presentation") && FullscreenActivity.presoShowChords) {
-                    song += t.replace("|", " ") + "\n";
+                    songBuilder.append(t.replace("|", " ")).append("\n");
                 } else {
-                    song += t + "\n";
+                    songBuilder.append(t).append("\n");
                 }
             }
         }
+        song = songBuilder.toString();
 
         if (FullscreenActivity.presenterChords.equals("N")) {
             // Split into lines
-            song = "";
+            StringBuilder songBuilder1 = new StringBuilder();
             for (String t:temp) {
                 if (t.startsWith(".") || t.startsWith(";")) {
-                    song += t + "\n";
+                    songBuilder1.append(t).append("\n");
                 } else {
-                    song += t.replace("|","\n") + "\n";
+                    songBuilder1.append(t.replace("|", "\n")).append("\n");
                 }
             }
+            song = songBuilder1.toString();
         } else {
             // Split into lines
             temp = song.split("\n");
-            song = "";
+            StringBuilder songBuilder1 = new StringBuilder();
             for (String t:temp) {
                 if (t.startsWith(".") || t.startsWith(";")) {
-                    song += t + "\n";
+                    songBuilder1.append(t).append("\n");
                 } else {
-                    song += t.replace("|"," ") + "\n";
+                    songBuilder1.append(t.replace("|", " ")).append("\n");
                 }
             }
+            song = songBuilder1.toString();
 
         }
         song = song.replace("\n[","\n%%__SPLITHERE__%%\n[");
@@ -1875,14 +1879,14 @@ public class ProcessSong extends Activity {
 
         // Check that we don't have empty sections
         String[] check = song.split("%%__SPLITHERE__%%");
-        String newsong = "";
+        StringBuilder newsong = new StringBuilder();
         for (String checkthis:check) {
-            if (checkthis!=null && !checkthis.isEmpty() && !checkthis.equals("") && !checkthis.equals(" ")) {
-                newsong += checkthis + "%%__SPLITHERE__%%";
+            if (checkthis != null && !checkthis.isEmpty() && !checkthis.equals(" ")) {
+                newsong.append(checkthis).append("%%__SPLITHERE__%%");
             }
         }
 
-        return newsong.split("%%__SPLITHERE__%%");
+        return newsong.toString().split("%%__SPLITHERE__%%");
 
         //return song.split("%%__SPLITHERE__%%");
     }
@@ -1982,7 +1986,7 @@ public class ProcessSong extends Activity {
         // The other issue is that custom tags (e.g. Guitar Solo) can have spaces in them
 
         String tempPresentationOrder = FullscreenActivity.mPresentation + " ";
-        String errors = "";
+        StringBuilder errors = new StringBuilder();
 
         // Go through each tag in the song
         for (String tag:currentSectionLabels) {
@@ -1991,7 +1995,7 @@ public class ProcessSong extends Activity {
             } else if (tempPresentationOrder.contains(tag)) {
                 tempPresentationOrder = tempPresentationOrder.replace(tag + " ", "<__" + tag + "__>");
             } else {
-                errors += tag + " - not found in presentation order\n";
+                errors.append(tag).append(" - not found in presentation order\n");
             }
         }
 
@@ -2005,7 +2009,7 @@ public class ProcessSong extends Activity {
         for (int d=0; d<tempPresOrderArray.length; d++) {
             if (!tempPresOrderArray[d].contains("__>")) {
                 if (!tempPresOrderArray[d].equals("") && !tempPresOrderArray[d].equals(" ")) {
-                    errors += tempPresOrderArray[d] + " - not found in song\n";
+                    errors.append(tempPresOrderArray[d]).append(" - not found in song\n");
                 }
                 tempPresOrderArray[d] = "";
                 // tempPresOrderArray now looks like "", "V1__>V2 ", "C__>", "V3__>", "C__>", "C__>", "Guitar Solo__>", "C__>Outro "
@@ -2014,29 +2018,29 @@ public class ProcessSong extends Activity {
                 String badbit = tempPresOrderArray[d].replace(goodbit+"__>","");
                 tempPresOrderArray[d] = goodbit;
                 if (!badbit.equals("") && !badbit.equals(" ")) {
-                    errors += badbit + " - not found in song\n";
+                    errors.append(badbit).append(" - not found in song\n");
                 }
                 // tempPresOrderArray now looks like "", "V1", "C", "V3", "C", "C", "Guitar Solo", "C"
             }
         }
 
         // Go through the tempPresOrderArray and add the sections back together as a string
-        String newSongText = "";
+        StringBuilder newSongText = new StringBuilder();
 
         for (String aTempPresOrderArray : tempPresOrderArray) {
             if (!aTempPresOrderArray.equals("")) {
                 for (int a = 0; a < currentSectionLabels.length; a++) {
                     if (currentSectionLabels[a].trim().equals(aTempPresOrderArray.trim())) {
-                        newSongText += currentSections[a] + "\n";
+                        newSongText.append(currentSections[a]).append("\n");
                     }
                 }
             }
         }
 
         // Display any errors
-        FullscreenActivity.myToastMessage = errors;
+        FullscreenActivity.myToastMessage = errors.toString();
 
-        return splitSongIntoSections(newSongText,c);
+        return splitSongIntoSections(newSongText.toString(),c);
 
     }
 
@@ -2137,15 +2141,15 @@ public class ProcessSong extends Activity {
     }
 
     static String songSectionChordPro(Context c, int x, boolean onsong) {
-        String chopro = "";
+        StringBuilder chopro = new StringBuilder();
         String[] heading = beautifyHeadings(FullscreenActivity.songSectionsLabels[x],c);
         if (onsong) {
-            chopro += heading[0].trim() + ":\n";
+            chopro.append(heading[0].trim()).append(":\n");
         } else {
             if (heading[1].equals("chorus")) {
-                chopro += "{soc}\n";
+                chopro.append("{soc}\n");
             } else {
-                chopro += "{c:" + heading[0].trim() + "}\n";
+                chopro.append("{c:").append(heading[0].trim()).append("}\n");
             }
         }
 
@@ -2185,7 +2189,7 @@ public class ProcessSong extends Activity {
                         } else {
                             chord_to_add = "";
                         }
-                        chopro += chord_to_add + lyrics_returned[w];
+                        chopro.append(chord_to_add).append(lyrics_returned[w]);
                     }
                     break;
 
@@ -2197,35 +2201,35 @@ public class ProcessSong extends Activity {
                         if (aChords_returned != null && !aChords_returned.trim().equals("")) {
                             chord_to_add = "[" + aChords_returned.trim() + "]";
                         }
-                        chopro += chord_to_add;
+                        chopro.append(chord_to_add);
                     }
                     break;
 
                 case "lyric_no_chord":
-                    chopro += FullscreenActivity.sectionContents[x][y].trim();
+                    chopro.append(FullscreenActivity.sectionContents[x][y].trim());
 
                     break;
 
                 case "comment_no_chord":
-                    chopro += "{c:" + FullscreenActivity.sectionContents[x][y].trim() + "}";
+                    chopro.append("{c:").append(FullscreenActivity.sectionContents[x][y].trim()).append("}");
                     break;
             }
-            chopro += "\n";
-            chopro = chopro.replace("][","]  [");
-            chopro = chopro.replace("\n\n","\n");
+            chopro.append("\n");
+            chopro = new StringBuilder(chopro.toString().replace("][", "]  ["));
+            chopro = new StringBuilder(chopro.toString().replace("\n\n", "\n"));
         }
 
         if (heading[1].equals("chorus")) {
-            chopro += "{eoc}\n";
+            chopro.append("{eoc}\n");
         }
-        chopro += "\n";
-        return chopro;
+        chopro.append("\n");
+        return chopro.toString();
     }
 
     static String songSectionText(Context c, int x) {
-        String text = "";
+        StringBuilder text = new StringBuilder();
         String[] heading = beautifyHeadings(FullscreenActivity.songSectionsLabels[x],c);
-        text += heading[0].trim() + ":";
+        text.append(heading[0].trim()).append(":");
 
         int linenums = FullscreenActivity.sectionContents[x].length;
 
@@ -2233,27 +2237,27 @@ public class ProcessSong extends Activity {
         for (int y = 0; y < linenums; y++) {
             if (FullscreenActivity.sectionContents[x][y].length() > 1 &&
                     FullscreenActivity.sectionContents[x][y].startsWith("[")) {
-                text += "";
+                text.append("");
             } else if (FullscreenActivity.sectionContents[x][y].length() > 1 &&
                     FullscreenActivity.sectionContents[x][y].startsWith(" ") ||
                     FullscreenActivity.sectionContents[x][y].startsWith(".") ||
                     FullscreenActivity.sectionContents[x][y].startsWith(";")) {
-                text += FullscreenActivity.sectionContents[x][y].substring(1);
+                text.append(FullscreenActivity.sectionContents[x][y].substring(1));
             } else {
-                text += FullscreenActivity.sectionContents[x][y];
+                text.append(FullscreenActivity.sectionContents[x][y]);
             }
-            text += "\n";
+            text.append("\n");
 
         }
-        text += "\n";
+        text.append("\n");
 
         if (FullscreenActivity.trimSections) {
-            text = text.trim();
+            text = new StringBuilder(text.toString().trim());
         }
-        return text;
+        return text.toString();
     }
     @SuppressWarnings("all")
-    public static LinearLayout songSectionView(Context c, int x, float fontsize, boolean projected) {
+    public static LinearLayout songSectionView(Context c, DocumentFile homeFolder, int x, float fontsize, boolean projected) {
 
         final LinearLayout ll = new LinearLayout(c);
 
@@ -2328,7 +2332,7 @@ public class ProcessSong extends Activity {
                             tl.addView(ProcessSong.chordlinetoTableRow(c, chords_returned, fontsize));
                         }
                         if (FullscreenActivity.showLyrics) {
-                            tl.addView(ProcessSong.lyriclinetoTableRow(c, lyrics_returned, fontsize));
+                            tl.addView(ProcessSong.lyriclinetoTableRow(c, homeFolder, lyrics_returned, fontsize));
                         }
                         break;
 
@@ -2347,7 +2351,7 @@ public class ProcessSong extends Activity {
                         lyrics_returned = new String[1];
                         lyrics_returned[0] = FullscreenActivity.sectionContents[x][y];
                         if (FullscreenActivity.showLyrics) {
-                            tl.addView(ProcessSong.lyriclinetoTableRow(c, lyrics_returned, fontsize));
+                            tl.addView(ProcessSong.lyriclinetoTableRow(c, homeFolder, lyrics_returned, fontsize));
                         }
                         break;
 
@@ -2414,7 +2418,7 @@ public class ProcessSong extends Activity {
         return ll;
     }
 
-    static LinearLayout projectedSectionView(Context c, int x, float fontsize) {
+    static LinearLayout projectedSectionView(Context c, DocumentFile homeFolder, int x, float fontsize) {
         final LinearLayout ll = new LinearLayout(c);
 
         if (FullscreenActivity.whichMode.equals("Presentation") && !FullscreenActivity.presoShowChords) {
@@ -2514,7 +2518,7 @@ public class ProcessSong extends Activity {
                         tl.addView(ProcessSong.chordlinetoTableRow(c, chords_returned, fontsize));
                     }
                     if (FullscreenActivity.showLyrics) {
-                        tl.addView(ProcessSong.lyriclinetoTableRow(c, lyrics_returned, fontsize));
+                        tl.addView(ProcessSong.lyriclinetoTableRow(c, homeFolder, lyrics_returned, fontsize));
                     }
                     break;
 
@@ -2534,7 +2538,7 @@ public class ProcessSong extends Activity {
                     lyrics_returned = new String[1];
                     lyrics_returned[0] = whattoprocess[y];
                     if (FullscreenActivity.showLyrics) {
-                        tl.addView(ProcessSong.lyriclinetoTableRow(c, lyrics_returned, fontsize));
+                        tl.addView(ProcessSong.lyriclinetoTableRow(c, homeFolder,lyrics_returned, fontsize));
                     }
                     break;
 
@@ -2548,9 +2552,9 @@ public class ProcessSong extends Activity {
                     lyrics_returned = new String[1];
                     lyrics_returned[0] = whattoprocess[y];
                     TableRow tr = commentlinetoTableRow(c, lyrics_returned, fontsize, false);
-                    tr.setGravity(Gravity.RIGHT);
+                    tr.setGravity(Gravity.END);
                     tl.addView(tr);
-                    tl.setGravity(Gravity.RIGHT);
+                    tl.setGravity(Gravity.END);
                     break;
 
                 case "guitar_tab":
@@ -2595,18 +2599,20 @@ public class ProcessSong extends Activity {
 
         // This only works for post Lollipop devices
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            LoadXML.getFileLocation();
+            LoadXML loadXML = new LoadXML();
+            loadXML.getFileLocation(c);
             // FileDescriptor for file, it allows you to close file when you are done with it
             ParcelFileDescriptor mFileDescriptor = null;
             PdfRenderer mPdfRenderer = null;
 
             try {
-                mFileDescriptor = ParcelFileDescriptor.open(FullscreenActivity.file, ParcelFileDescriptor.MODE_READ_ONLY);
+                mFileDescriptor = c.getContentResolver().
+                        openFileDescriptor(FullscreenActivity.file.getUri(), "r");
                 if (mFileDescriptor != null) {
                     mPdfRenderer = new PdfRenderer(mFileDescriptor);
                     FullscreenActivity.pdfPageCount = mPdfRenderer.getPageCount();
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
                 FullscreenActivity.pdfPageCount = 0;
             }
@@ -2678,9 +2684,7 @@ public class ProcessSong extends Activity {
             // Pdf page is rendered on Bitmap
             if (mCurrentPage != null) {
                 try {
-                    if (PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY>-1) {
-                        mCurrentPage.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
-                    }
+                    mCurrentPage.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -2879,12 +2883,13 @@ public class ProcessSong extends Activity {
         }
     }
 
-    static void addExtraInfo(Context c) {
+    static void addExtraInfo(Context c, DocumentFile homeFolder) {
         String nextinset = "";
         if (FullscreenActivity.setView) {
             // Get the index in the set
             if (!FullscreenActivity.nextSongInSet.equals("")) {
-                FullscreenActivity.nextSongKeyInSet = LoadXML.grabNextSongInSetKey(c,FullscreenActivity.nextSongInSet);
+                LoadXML loadXML = new LoadXML();
+                FullscreenActivity.nextSongKeyInSet = loadXML.grabNextSongInSetKey(c,homeFolder,FullscreenActivity.nextSongInSet);
                 nextinset = ";__" + c.getString(R.string.next) + ": " + FullscreenActivity.nextSongInSet;
                 if (!FullscreenActivity.nextSongKeyInSet.equals("")) {
                     nextinset = nextinset + " (" + FullscreenActivity.nextSongKeyInSet + ")";
@@ -2901,14 +2906,14 @@ public class ProcessSong extends Activity {
             //ShowToast.showToast(c);
         }*/
 
-        String stickyNotes = "";
+        StringBuilder stickyNotes = new StringBuilder();
         if (FullscreenActivity.toggleAutoSticky.equals("T")||FullscreenActivity.toggleAutoSticky.equals("B")) {
             String notes[] = FullscreenActivity.mNotes.split("\n");
-            stickyNotes += ";__"+c.getString(R.string.note)+": ";
+            stickyNotes.append(";__").append(c.getString(R.string.note)).append(": ");
             for (String line:notes) {
-                stickyNotes += ";__" + line + "\n";
+                stickyNotes.append(";__").append(line).append("\n");
             }
-            stickyNotes = stickyNotes.replace(";__"+c.getString(R.string.note)+": "+";__",";__"+c.getString(R.string.note)+": ");
+            stickyNotes = new StringBuilder(stickyNotes.toString().replace(";__" + c.getString(R.string.note) + ": " + ";__", ";__" + c.getString(R.string.note) + ": "));
             if (FullscreenActivity.toggleAutoSticky.equals("T") && !FullscreenActivity.mNotes.equals("")) {
                 FullscreenActivity.myLyrics = stickyNotes + "\n" + FullscreenActivity.myLyrics;
             }
@@ -2934,9 +2939,7 @@ public class ProcessSong extends Activity {
             FullscreenActivity.myLyrics = FullscreenActivity.myLyrics + "\n\n" + nextinset;
         }
 
-        if (!capoDetails.equals("")) {
-            FullscreenActivity.myLyrics = capoDetails + FullscreenActivity.myLyrics;
-        }
+        FullscreenActivity.myLyrics = capoDetails + FullscreenActivity.myLyrics;
 
     }
 
@@ -3026,7 +3029,7 @@ public class ProcessSong extends Activity {
     }
 
     // The stuff for the highlighter notes
-    static File getHighlightFile(Context c) {
+    static DocumentFile getHighlightFile(Context c) {
         String layout;
         String highlighterfile;
         if (c.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
@@ -3048,7 +3051,9 @@ public class ProcessSong extends Activity {
         highlighterfile =  highlighterfile + layout + page + ".png";
 
         // This file may or may not exist
-        return new File (FullscreenActivity.dirhighlighter,highlighterfile);
+        StorageAccess storageAccess = new StorageAccess();
+        DocumentFile homeFolder = storageAccess.getHomeFolder(c);
+        return storageAccess.getFileLocationAsDocumentFile(c,homeFolder,"Highlighter","",highlighterfile);
     }
 
 }

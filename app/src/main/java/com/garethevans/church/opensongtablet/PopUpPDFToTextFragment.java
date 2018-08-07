@@ -190,7 +190,7 @@ public class PopUpPDFToTextFragment extends DialogFragment {
         FullscreenActivity.songfilename = FullscreenActivity.songfilename.replace(".pdf","_from_pdf");
         FullscreenActivity.songfilename = FullscreenActivity.songfilename.replace(".PDF","_from_pdf");
         try {
-            PopUpEditSongFragment.justSaveSongXML();
+            PopUpEditSongFragment.justSaveSongXML(getActivity());
             if (mListener!=null) {
                 FullscreenActivity.myToastMessage = "";
                 mListener.refreshAll();
@@ -205,23 +205,23 @@ public class PopUpPDFToTextFragment extends DialogFragment {
     }
 
     public void getPDFExtractedText() {
-        String parsedText="";
+        StringBuilder parsedText= new StringBuilder();
         try {
             PdfReader reader = new PdfReader(FullscreenActivity.file.toString());
             int n = reader.getNumberOfPages();
             for (int i = 1; i<=n ; i++) {
                 String text = detectAndImproveLine(PdfTextExtractor.getTextFromPage(reader, i));
-                parsedText = parsedText + text  +"\n"; //Extracting the content from the different pages
+                parsedText.append(text).append("\n"); //Extracting the content from the different pages
             }
             reader.close();
         } catch (Exception e) {
             Log.d("d","Error extracting text");
         }
-        foundText = PopUpEditSongFragment.parseToHTMLEntities(parsedText);
+        foundText = PopUpEditSongFragment.parseToHTMLEntities(parsedText.toString());
     }
 
     public String detectAndImproveLine(String alltext) {
-        String fixedtext = "";
+        StringBuilder fixedtext = new StringBuilder();
         // Split the text into lines
         String[] lines = alltext.split("\n");
         for (String s:lines) {
@@ -327,8 +327,8 @@ public class PopUpPDFToTextFragment extends DialogFragment {
                 s = " " + s;
             }
             Log.d("d", "s=" + s);
-            fixedtext = fixedtext + s + "\n";
+            fixedtext.append(s).append("\n");
         }
-        return fixedtext.trim();
+        return fixedtext.toString().trim();
     }
 }

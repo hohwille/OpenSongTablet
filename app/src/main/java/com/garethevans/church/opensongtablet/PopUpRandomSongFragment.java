@@ -6,6 +6,7 @@ import android.app.DialogFragment;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -71,11 +72,17 @@ public class PopUpRandomSongFragment extends DialogFragment {
     boolean songisvalid = false;
     boolean iserror = false;
 
+    StorageAccess storageAccess;
+    DocumentFile homeFolder;
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         getDialog().requestWindowFeature(Window.FEATURE_NO_TITLE);
         getDialog().setCanceledOnTouchOutside(true);
         View V = inflater.inflate(R.layout.popup_randomsong, container, false);
+
+        storageAccess = new StorageAccess();
+        homeFolder = storageAccess.getHomeFolder(getActivity());
 
         TextView title = V.findViewById(R.id.dialogtitle);
         title.setText(getActivity().getResources().getString(R.string.random_song));
@@ -99,8 +106,17 @@ public class PopUpRandomSongFragment extends DialogFragment {
         chooseFolders_ListView = V.findViewById(R.id.chooseFolders_ListView);
 
         // Update the song folders
-        FullscreenActivity.songfilelist = new SongFileList();
-        ListSongFiles.getAllSongFolders();
+        //FullscreenActivity.songfilelist = new SongFileList();
+        //ListSongFiles listSongFiles = new ListSongFiles();
+        //listSongFiles.getAllSongFolders(getActivity(), homeFolder);
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // Update the song folders
+                storageAccess.getSongFolderContents(getActivity());
+            }
+        }).run();
 
         // Try to generate the file folders available to choose from and highlight the ones already specified
         generateFolderList();
@@ -138,7 +154,7 @@ public class PopUpRandomSongFragment extends DialogFragment {
 
     public void generateFolderList() {
         // Since users change their folders, update this chosen list with those actually available
-        String newRandomFoldersChosen = "";
+        StringBuilder newRandomFoldersChosen = new StringBuilder();
         if (FullscreenActivity.mSongFolderNames!=null) {
             ArrayAdapter<String> songfolders = new ArrayAdapter<>(getActivity(),
                     android.R.layout.simple_list_item_checked, FullscreenActivity.mSongFolderNames);
@@ -148,7 +164,7 @@ public class PopUpRandomSongFragment extends DialogFragment {
             for (int i = 0; i < FullscreenActivity.mSongFolderNames.length; i++) {
                 if (FullscreenActivity.randomFolders.contains("$$__"+FullscreenActivity.mSongFolderNames[i]+"__$$")) {
                     chooseFolders_ListView.setItemChecked(i,true);
-                    newRandomFoldersChosen += "$$__"+FullscreenActivity.mSongFolderNames[i]+"__$$";
+                    newRandomFoldersChosen.append("$$__").append(FullscreenActivity.mSongFolderNames[i]).append("__$$");
                 } else {
                     chooseFolders_ListView.setItemChecked(i,false);
                 }
@@ -176,7 +192,7 @@ public class PopUpRandomSongFragment extends DialogFragment {
             });
 
             // Update the chosen folders based on what is actually available
-            FullscreenActivity.randomFolders = newRandomFoldersChosen;
+            FullscreenActivity.randomFolders = newRandomFoldersChosen.toString();
             Preferences.savePreferences();
         }
     }

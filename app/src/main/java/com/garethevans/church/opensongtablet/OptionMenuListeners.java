@@ -10,6 +10,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.support.v7.widget.SwitchCompat;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -22,9 +23,6 @@ import android.widget.TextView;
 import com.peak.salut.Callbacks.SalutCallback;
 import com.peak.salut.Callbacks.SalutDeviceCallback;
 import com.peak.salut.SalutDevice;
-
-import java.io.File;
-import java.io.IOException;
 
 public class OptionMenuListeners extends Activity {
 
@@ -138,112 +136,176 @@ public class OptionMenuListeners extends Activity {
     private static LinearLayout createMainMenu(Context c) {
         LayoutInflater inflater;
         inflater = (LayoutInflater) c.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        return (LinearLayout) inflater.inflate(R.layout.popup_option, null);
+        if (inflater != null) {
+            return (LinearLayout) inflater.inflate(R.layout.popup_option, null);
+        } else {
+            return null;
+        }
     }
 
     @SuppressLint("InflateParams")
     private static LinearLayout createSetMenu(Context c) {
         LayoutInflater inflater;
         inflater = (LayoutInflater) c.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        return (LinearLayout) inflater.inflate(R.layout.popup_option_set,null);
+        if (inflater != null) {
+            return (LinearLayout) inflater.inflate(R.layout.popup_option_set,null);
+        } else {
+            return null;
+        }
     }
 
     @SuppressLint("InflateParams")
     private static LinearLayout createSongMenu(Context c) {
         LayoutInflater inflater;
         inflater = (LayoutInflater) c.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        return (LinearLayout) inflater.inflate(R.layout.popup_option_song,null);
+        if (inflater != null) {
+            return (LinearLayout) inflater.inflate(R.layout.popup_option_song,null);
+        } else {
+            return null;
+        }
     }
 
     @SuppressLint("InflateParams")
     private static LinearLayout createChordsMenu(Context c) {
         LayoutInflater inflater;
         inflater = (LayoutInflater) c.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        return (LinearLayout) inflater.inflate(R.layout.popup_option_chords,null);
+        if (inflater != null) {
+            return (LinearLayout) inflater.inflate(R.layout.popup_option_chords,null);
+        } else {
+            return null;
+        }
     }
 
     @SuppressLint("InflateParams")
     private static LinearLayout createDisplayMenu(Context c) {
         LayoutInflater inflater;
         inflater = (LayoutInflater) c.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        return (LinearLayout) inflater.inflate(R.layout.popup_option_display,null);
+        if (inflater != null) {
+            return (LinearLayout) inflater.inflate(R.layout.popup_option_display,null);
+        } else {
+            return null;
+        }
     }
 
     @SuppressLint("InflateParams")
     private static LinearLayout createStorageMenu(Context c) {
         LayoutInflater inflater;
         inflater = (LayoutInflater) c.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        return (LinearLayout) inflater.inflate(R.layout.popup_option_storage,null);
+        if (inflater != null) {
+            return (LinearLayout) inflater.inflate(R.layout.popup_option_storage,null);
+        } else {
+            return null;
+        }
     }
 
     @SuppressLint("InflateParams")
     private static LinearLayout createMidiMenu(Context c) {
         LayoutInflater inflater;
         inflater = (LayoutInflater) c.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        return (LinearLayout) inflater.inflate(R.layout.popup_option_midi,null);
+        if (inflater != null) {
+            return (LinearLayout) inflater.inflate(R.layout.popup_option_midi,null);
+        } else {
+            return null;
+        }
     }
 
     @SuppressLint("InflateParams")
     private static LinearLayout createFindSongsMenu(Context c) {
         LayoutInflater inflater;
         inflater = (LayoutInflater) c.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        return (LinearLayout) inflater.inflate(R.layout.popup_option_findsongs,null);
+        if (inflater != null) {
+            return (LinearLayout) inflater.inflate(R.layout.popup_option_findsongs,null);
+        } else {
+            return null;
+        }
     }
 
     @SuppressLint("InflateParams")
     private static LinearLayout createConnectMenu(Context c) {
         LayoutInflater inflater;
         inflater = (LayoutInflater) c.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        return (LinearLayout) inflater.inflate(R.layout.popup_option_connections,null);
+        if (inflater != null) {
+            return (LinearLayout) inflater.inflate(R.layout.popup_option_connections,null);
+        } else {
+            return null;
+        }
     }
 
     @SuppressLint("InflateParams")
     private static LinearLayout createModeMenu(Context c) {
         LayoutInflater inflater;
         inflater = (LayoutInflater) c.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        return (LinearLayout) inflater.inflate(R.layout.popup_option_modes,null);
+        if (inflater != null) {
+            return (LinearLayout) inflater.inflate(R.layout.popup_option_modes,null);
+        } else {
+            return null;
+        }
     }
 
     @SuppressLint("InflateParams")
     private static LinearLayout createGesturesMenu(Context c) {
         LayoutInflater inflater;
         inflater = (LayoutInflater) c.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        return (LinearLayout) inflater.inflate(R.layout.popup_option_gestures,null);
+        if (inflater != null) {
+            return (LinearLayout) inflater.inflate(R.layout.popup_option_gestures,null);
+        } else {
+            return null;
+        }
     }
 
     @SuppressLint("InflateParams")
     private static LinearLayout createAutoscrollMenu(Context c) {
         LayoutInflater inflater;
         inflater = (LayoutInflater) c.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        return (LinearLayout) inflater.inflate(R.layout.popup_option_autoscroll,null);
+        if (inflater != null) {
+            return (LinearLayout) inflater.inflate(R.layout.popup_option_autoscroll,null);
+        } else {
+            return null;
+        }
     }
 
     @SuppressLint("InflateParams")
     private static LinearLayout createPadMenu(Context c) {
         LayoutInflater inflater;
         inflater = (LayoutInflater) c.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        return (LinearLayout) inflater.inflate(R.layout.popup_option_pad,null);
+        if (inflater != null) {
+            return (LinearLayout) inflater.inflate(R.layout.popup_option_pad,null);
+        } else {
+            return null;
+        }
     }
 
     @SuppressLint("InflateParams")
     private static LinearLayout createMetronomeMenu(Context c) {
         LayoutInflater inflater;
         inflater = (LayoutInflater) c.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        return (LinearLayout) inflater.inflate(R.layout.popup_option_metronome,null);
+        if (inflater != null) {
+            return (LinearLayout) inflater.inflate(R.layout.popup_option_metronome,null);
+        } else {
+            return null;
+        }
     }
 
     @SuppressLint("InflateParams")
     private static LinearLayout createCCLIMenu(Context c) {
         LayoutInflater inflater;
         inflater = (LayoutInflater) c.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        return (LinearLayout) inflater.inflate(R.layout.popup_option_ccli,null);
+        if (inflater != null) {
+            return (LinearLayout) inflater.inflate(R.layout.popup_option_ccli,null);
+        } else {
+            return null;
+        }
     }
 
     @SuppressLint("InflateParams")
     private static LinearLayout createOtherMenu(Context c) {
         LayoutInflater inflater;
         inflater = (LayoutInflater) c.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        return (LinearLayout) inflater.inflate(R.layout.popup_option_other,null);
+        if (inflater != null) {
+            return (LinearLayout) inflater.inflate(R.layout.popup_option_other,null);
+        } else {
+            return null;
+        }
     }
 
     static void optionListeners(View v, Context c) {
@@ -355,11 +417,7 @@ public class OptionMenuListeners extends Activity {
         menuOtherButton.setText(c.getString(R.string.options_other).toUpperCase(FullscreenActivity.locale));
 
         // Only allow connection menu for JellyBean+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            menuConnectButton.setVisibility(View.VISIBLE);
-        } else {
-            menuConnectButton.setVisibility(View.GONE);
-        }
+        menuConnectButton.setVisibility(View.VISIBLE);
 
         // Only allow MIDI menu for Marshmallow+ and if it is available
         if (Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
@@ -559,10 +617,7 @@ public class OptionMenuListeners extends Activity {
         setVariationButton.setText(c.getString(R.string.customise_set_item).toUpperCase(FullscreenActivity.locale));
         setEditButton.setText(c.getString(R.string.options_set_edit).toUpperCase(FullscreenActivity.locale));
         showSetTickBoxInSongMenu.setText(c.getString(R.string.setquickcheck).toUpperCase(FullscreenActivity.locale));
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            showSetTickBoxInSongMenu.setChecked(FullscreenActivity.showSetTickBoxInSongMenu);
-        }
+        showSetTickBoxInSongMenu.setChecked(FullscreenActivity.showSetTickBoxInSongMenu);
 
         // Set the button listeners
         menuup.setOnClickListener(new View.OnClickListener() {
@@ -589,7 +644,10 @@ public class OptionMenuListeners extends Activity {
         setSaveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                File settosave = new File(FullscreenActivity.dirsets,FullscreenActivity.lastSetName);
+                StorageAccess storageAccess = new StorageAccess();
+                DocumentFile homeFolder = storageAccess.getHomeFolder(c);
+                DocumentFile settosave = storageAccess.getFileLocationAsDocumentFile(c,homeFolder,
+                        "Sets","",FullscreenActivity.lastSetName);
                 if (FullscreenActivity.lastSetName==null || FullscreenActivity.lastSetName.equals("")) {
                     FullscreenActivity.whattodo = "saveset";
                     if (mListener != null) {
@@ -736,8 +794,9 @@ public class OptionMenuListeners extends Activity {
                         FullscreenActivity.pdfPageCurrent = 0;
                         FullscreenActivity.linkclicked = FullscreenActivity.mSetList[val];
                         FullscreenActivity.indexSongInSet = val;
-                        SetActions.songIndexClickInSet();
-                        SetActions.getSongFileAndFolder(c);
+                        SetActions setActions = new SetActions();
+                        setActions.songIndexClickInSet();
+                        setActions.getSongFileAndFolder(c);
                         if (mListener!=null) {
                             mListener.closeMyDrawers("option");
                             mListener.loadSong();
@@ -802,10 +861,8 @@ public class OptionMenuListeners extends Activity {
         }
 
         // Set the switches up based on preferences
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            songPresentationOrderButton.setChecked(FullscreenActivity.usePresentationOrder);
-            songKeepMultiLineCompactButton.setChecked(FullscreenActivity.multilineCompact);
-        }
+        songPresentationOrderButton.setChecked(FullscreenActivity.usePresentationOrder);
+        songKeepMultiLineCompactButton.setChecked(FullscreenActivity.multilineCompact);
 
         // Set the button listeners
         menuup.setOnClickListener(new View.OnClickListener() {
@@ -1030,49 +1087,33 @@ public class OptionMenuListeners extends Activity {
 
         // Set the switches up based on preferences
         if (FullscreenActivity.showChords) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-                chordsToggleSwitch.setChecked(true);
-            }
+            chordsToggleSwitch.setChecked(true);
         } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-                chordsToggleSwitch.setChecked(false);
-            }
+            chordsToggleSwitch.setChecked(false);
             chordsCapoToggleSwitch.setEnabled(false);
             chordsNativeAndCapoToggleSwitch.setEnabled(false);
         }
 
         if (FullscreenActivity.capoFontSizeInfoBar==20.0f) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-                switchCapoTextSize.setChecked(true);
-            }
+            switchCapoTextSize.setChecked(true);
         } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-                switchCapoTextSize.setChecked(false);
-            }
+            switchCapoTextSize.setChecked(false);
         }
 
         if (FullscreenActivity.showLyrics) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-                chordsLyricsToggleSwitch.setChecked(true);
-            }
+            chordsLyricsToggleSwitch.setChecked(true);
         } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-                chordsLyricsToggleSwitch.setChecked(false);
-            }
+            chordsLyricsToggleSwitch.setChecked(false);
         }
         boolean capochordsbuttonenabled = FullscreenActivity.showChords;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            chordsCapoToggleSwitch.setChecked(FullscreenActivity.showCapoChords);
-        }
+        chordsCapoToggleSwitch.setChecked(FullscreenActivity.showCapoChords);
         chordsCapoToggleSwitch.setEnabled(capochordsbuttonenabled);
         if (!capochordsbuttonenabled) {
             chordsCapoToggleSwitch.setAlpha(0.4f);
         }
 
         boolean nativeandcapobuttonenabled = FullscreenActivity.showChords && capochordsbuttonenabled;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            chordsNativeAndCapoToggleSwitch.setChecked(FullscreenActivity.showNativeAndCapoChords);
-        }
+        chordsNativeAndCapoToggleSwitch.setChecked(FullscreenActivity.showNativeAndCapoChords);
         chordsNativeAndCapoToggleSwitch.setEnabled(nativeandcapobuttonenabled);
         if (!nativeandcapobuttonenabled) {
             chordsNativeAndCapoToggleSwitch.setAlpha(0.4f);
@@ -1124,8 +1165,8 @@ public class OptionMenuListeners extends Activity {
                     FullscreenActivity.switchsharpsflats = true;
                     Transpose.checkChordFormat();
                     try {
-                        Transpose.doTranspose();
-                    } catch (IOException e) {
+                        Transpose.doTranspose(c);
+                    } catch (Exception e) {
                         e.printStackTrace();
                     }
                     Preferences.savePreferences();
@@ -1155,8 +1196,8 @@ public class OptionMenuListeners extends Activity {
                     FullscreenActivity.switchsharpsflats = true;
                     Transpose.checkChordFormat();
                     try {
-                        Transpose.doTranspose();
-                    } catch (IOException e) {
+                        Transpose.doTranspose(c);
+                    } catch (Exception e) {
                         e.printStackTrace();
                     }
                     Preferences.savePreferences();
@@ -1284,8 +1325,8 @@ public class OptionMenuListeners extends Activity {
                     FullscreenActivity.transposeDirection = "0";
                     Transpose.checkChordFormat();
                     try {
-                        Transpose.doTranspose();
-                    } catch (IOException e) {
+                        Transpose.doTranspose(c);
+                    } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }
@@ -1830,9 +1871,7 @@ public class OptionMenuListeners extends Activity {
         }
         FullscreenActivity.clientButton.setText(FullscreenActivity.clientButtonText);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            connectionsReceiveHostFile.setChecked(FullscreenActivity.receiveHostFiles);
-        }
+        connectionsReceiveHostFile.setChecked(FullscreenActivity.receiveHostFiles);
 
         // Set the button listeners
         menuUp.setOnClickListener(new View.OnClickListener() {
@@ -2139,15 +2178,17 @@ public class OptionMenuListeners extends Activity {
                 }
             }
         });
+
         modePerformanceButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if (!FullscreenActivity.whichMode.equals("Performance")) {
+                    FullscreenActivity.stayinsameclass = FullscreenActivity.whichMode.equals("Stage");
                     // Switch to performance mode
                     FullscreenActivity.whichMode = "Performance";
                     Preferences.savePreferences();
                     Intent performmode = new Intent();
-                    performmode.setClass(c, FullscreenActivity.class);
+                    performmode.setClass(FullscreenActivity.mContext, StageMode.class);
                     if (mListener!=null) {
                         mListener.closeMyDrawers("option");
                         mListener.callIntent("activity", performmode);
@@ -2159,11 +2200,12 @@ public class OptionMenuListeners extends Activity {
             @Override
             public void onClick(View view) {
                 if (!FullscreenActivity.whichMode.equals("Stage")) {
+                    FullscreenActivity.stayinsameclass = FullscreenActivity.whichMode.equals("Performace");
                     // Switch to stage mode
                     FullscreenActivity.whichMode = "Stage";
                     Preferences.savePreferences();
                     Intent stagemode = new Intent();
-                    stagemode.setClass(c, FullscreenActivity.class);
+                    stagemode.setClass(FullscreenActivity.mContext, StageMode.class);
                     if (mListener!=null) {
                         mListener.closeMyDrawers("option");
                         mListener.callIntent("activity", stagemode);
@@ -2179,7 +2221,7 @@ public class OptionMenuListeners extends Activity {
                     FullscreenActivity.whichMode = "Presentation";
                     Preferences.savePreferences();
                     Intent presentmode = new Intent();
-                    presentmode.setClass(c, FullscreenActivity.class);
+                    presentmode.setClass(FullscreenActivity.mContext, PresenterMode.class);
                     if (mListener!=null) {
                         mListener.closeMyDrawers("option");
                         mListener.callIntent("activity", presentmode);
@@ -2224,9 +2266,7 @@ public class OptionMenuListeners extends Activity {
         gesturesSongSwipeButton.setText(c.getString(R.string.swipe).toUpperCase(FullscreenActivity.locale));
 
         // Set the switches up based on preferences
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            displayMenuToggleSwitch.setChecked(FullscreenActivity.hideActionBar);
-        }
+        displayMenuToggleSwitch.setChecked(FullscreenActivity.hideActionBar);
 
         // Set the button listeners
         menuup.setOnClickListener(new View.OnClickListener() {
@@ -2352,19 +2392,13 @@ public class OptionMenuListeners extends Activity {
         autoScrollLearnButton.setText(c.getString(R.string.timer_learn).toUpperCase(FullscreenActivity.locale));
 
         // Set the switches up based on preferences
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            autoScrollStartButton.setChecked(FullscreenActivity.autostartautoscroll);
-            autoscrollActivatedSwitch.setChecked(FullscreenActivity.clickedOnAutoScrollStart);
-        }
+        autoScrollStartButton.setChecked(FullscreenActivity.autostartautoscroll);
+        autoscrollActivatedSwitch.setChecked(FullscreenActivity.clickedOnAutoScrollStart);
 
         if (FullscreenActivity.timerFontSizeAutoScroll==20.0f) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-                switchTimerSize.setChecked(true);
-            }
+            switchTimerSize.setChecked(true);
         } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-                switchTimerSize.setChecked(false);
-            }
+            switchTimerSize.setChecked(false);
         }
 
         // Set the button listeners
@@ -2463,18 +2497,12 @@ public class OptionMenuListeners extends Activity {
 
         // Set the switch
         if (FullscreenActivity.timerFontSizePad==20.0f) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-                switchTimerSize.setChecked(true);
-            }
+            switchTimerSize.setChecked(true);
         } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-                switchTimerSize.setChecked(false);
-            }
+            switchTimerSize.setChecked(false);
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            padStartButton.setChecked(FullscreenActivity.autostartpad);
-            padActivatedSwitch.setChecked(FullscreenActivity.clickedOnPadStart);
-        }
+        padStartButton.setChecked(FullscreenActivity.autostartpad);
+        padActivatedSwitch.setChecked(FullscreenActivity.clickedOnPadStart);
         // Set the button listeners
         menuup.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -2563,10 +2591,8 @@ public class OptionMenuListeners extends Activity {
         metronomeStartButton.setText(c.getString(R.string.autostartmetronome).toUpperCase(FullscreenActivity.locale));
 
         // Set the switches up based on preferences
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            metronomeStartButton.setChecked(FullscreenActivity.autostartmetronome);
-            metronomeActivatedSwitch.setChecked(FullscreenActivity.clickedOnMetronomeStart);
-        }
+        metronomeStartButton.setChecked(FullscreenActivity.autostartmetronome);
+        metronomeActivatedSwitch.setChecked(FullscreenActivity.clickedOnMetronomeStart);
 
         // Set the button listeners
         menuup.setOnClickListener(new View.OnClickListener() {
@@ -2643,9 +2669,7 @@ public class OptionMenuListeners extends Activity {
         ccliResetButton.setText(c.getString(R.string.ccli_reset).toUpperCase(FullscreenActivity.locale));
 
         // Set the switches up based on preferences
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            ccliAutoButton.setChecked(FullscreenActivity.ccli_automatic);
-        }
+        ccliAutoButton.setChecked(FullscreenActivity.ccli_automatic);
 
         // Set the button listeners
         menuup.setOnClickListener(new View.OnClickListener() {

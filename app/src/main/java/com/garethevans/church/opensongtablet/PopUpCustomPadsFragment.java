@@ -3,6 +3,7 @@ package com.garethevans.church.opensongtablet;
 import android.app.DialogFragment;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,7 +12,6 @@ import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import java.io.File;
 import java.util.ArrayList;
 
 public class PopUpCustomPadsFragment extends DialogFragment {
@@ -25,6 +25,9 @@ public class PopUpCustomPadsFragment extends DialogFragment {
         frag = new PopUpCustomPadsFragment();
         return frag;
     }
+
+    StorageAccess storageAccess;
+    DocumentFile homeFolder;
 
     @Override
     public void onStart() {
@@ -46,6 +49,8 @@ public class PopUpCustomPadsFragment extends DialogFragment {
         getDialog().setCanceledOnTouchOutside(true);
         getDialog().requestWindowFeature(Window.FEATURE_NO_TITLE);
 
+        storageAccess = new StorageAccess();
+        homeFolder = storageAccess.getHomeFolder(getActivity());
         View V = inflater.inflate(R.layout.popup_custompads, container, false);
 
         TextView title = V.findViewById(R.id.dialogtitle);
@@ -89,10 +94,12 @@ public class PopUpCustomPadsFragment extends DialogFragment {
         padGm = V.findViewById(R.id.padGm);
 
         // Set up the spinners
-        File[] files = FullscreenActivity.dirPads.listFiles();
+        DocumentFile dirPads = storageAccess.getFileLocationAsDocumentFile(getActivity(),homeFolder,
+                "Pads","","");
+        DocumentFile[] files = dirPads.listFiles();
         filenames = new ArrayList<>();
         filenames.add(getActivity().getString(R.string.pad_auto));
-        for (File f:files) {
+        for (DocumentFile f:files) {
             filenames.add(f.getName());
         }
         ArrayAdapter<String> aa = new ArrayAdapter<>(getActivity(),R.layout.my_spinner,filenames);

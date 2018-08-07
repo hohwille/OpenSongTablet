@@ -16,8 +16,6 @@ import android.widget.EditText;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-import java.io.IOException;
-
 public class PopUpEditStickyFragment extends DialogFragment {
 
     static PopUpEditStickyFragment newInstance() {
@@ -182,8 +180,8 @@ public class PopUpEditStickyFragment extends DialogFragment {
         // Save the file
         PopUpEditSongFragment.prepareSongXML();
         try {
-            PopUpEditSongFragment.justSaveSongXML();
-        } catch (IOException e) {
+            PopUpEditSongFragment.justSaveSongXML(getActivity());
+        } catch (Exception e) {
             e.printStackTrace();
             FullscreenActivity.myToastMessage = getActivity().getResources().getString(R.string.savesong) + " - " +
                     getActivity().getResources().getString(R.string.error);

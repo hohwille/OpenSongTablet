@@ -1,41 +1,45 @@
 package com.garethevans.church.opensongtablet;
 
 import android.content.Context;
+import android.support.v4.provider.DocumentFile;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.OutputStream;
 
 class CustomSlide {
 
-    static void addCustomSlide(Context c) {
-        String filename, reusablefilename, templocator;
+    void addCustomSlide(Context c, DocumentFile homeFolder) {
+        String where, reusablewhere, subfolder, templocator;
 
         // Get rid of illegal characters
         String filetitle = FullscreenActivity.customslide_title.replaceAll("[|?*<\":>+\\[\\]']", " ");
 
         switch (FullscreenActivity.noteorslide) {
             case "note":
-                filename = FullscreenActivity.dircustomnotes + "/" + filetitle;
-                reusablefilename = FullscreenActivity.homedir + "/Notes/" + filetitle;
+                where = "Notes";
+                subfolder = "_cache";
+                reusablewhere = "";
                 templocator = c.getResources().getString(R.string.note);
                 FullscreenActivity.customimage_list = "";
                 break;
             case "slide":
-                filename = FullscreenActivity.dircustomslides + "/" + filetitle;
-                reusablefilename = FullscreenActivity.homedir + "/Slides/" + filetitle;
+                where = "Slides";
+                subfolder = "_cache";
+                reusablewhere = "";
                 templocator = c.getResources().getString(R.string.slide);
                 FullscreenActivity.customimage_list = "";
                 break;
             case "scripture":
-                filename = FullscreenActivity.dirscriptureverses + "/" + filetitle;
-                reusablefilename = FullscreenActivity.dirscripture + "/" + filetitle;
+                where = "Scripture";
+                subfolder = "_cache";
+                reusablewhere = "";
                 templocator = c.getResources().getString(R.string.scripture);
                 FullscreenActivity.customreusable = false;
                 FullscreenActivity.customimage_list = "";
                 break;
             default:
-                filename = FullscreenActivity.dircustomimages + "/" + filetitle;
-                reusablefilename = FullscreenActivity.homedir + "/Images/" + filetitle;
+                where = "Images";
+                subfolder = "_cache";
+                reusablewhere = "";
                 templocator = c.getResources().getString(R.string.image);
                 break;
         }
@@ -49,6 +53,7 @@ class CustomSlide {
 
         // Prepare the custom slide so it can be viewed in the app
         // When exporting/saving the set, the contents get grabbed from this
+
         FullscreenActivity.mynewXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
         FullscreenActivity.mynewXML += "<song>\n";
         FullscreenActivity.mynewXML += "  <title>" + FullscreenActivity.customslide_title + "</title>\n";
@@ -66,28 +71,15 @@ class CustomSlide {
         FullscreenActivity.mynewXML = FullscreenActivity.mynewXML.replace("&", "&amp;");
 
         // Now write the modified song
-        FileOutputStream overWrite;
-        try {
-            overWrite = new FileOutputStream(filename, false);
-            overWrite.write(FullscreenActivity.mynewXML.getBytes());
-            overWrite.flush();
-            overWrite.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        StorageAccess storageAccess = new StorageAccess();
+        OutputStream os = storageAccess.getOutputStream(c,homeFolder, where,subfolder,filetitle);
+        storageAccess.writeStringToFile(c,os,FullscreenActivity.mynewXML);
 
         // If this is to be a reusable custom slide
         if (FullscreenActivity.customreusable) {
             // Now write the modified song
-            FileOutputStream overWriteResuable;
-            try {
-                overWriteResuable = new FileOutputStream(reusablefilename, false);
-                overWriteResuable.write(FullscreenActivity.mynewXML.getBytes());
-                overWriteResuable.flush();
-                overWriteResuable.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            OutputStream osr = storageAccess.getOutputStream(c,homeFolder, where,reusablewhere,filetitle);
+            storageAccess.writeStringToFile(c,osr,FullscreenActivity.mynewXML);
             FullscreenActivity.customreusable = false;
         }
 
@@ -101,6 +93,7 @@ class CustomSlide {
         Preferences.savePreferences();
 
         // Show the current set
-        SetActions.prepareSetList();
+        SetActions setActions = new SetActions();
+        setActions.prepareSetList();
     }
 }

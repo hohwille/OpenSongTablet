@@ -1,15 +1,13 @@
 package com.garethevans.church.opensongtablet;
 
 import android.content.Context;
-import android.util.Log;
+import android.support.v4.provider.DocumentFile;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.OutputStream;
 
 class UsrConvert {
 
-    static boolean doExtract(Context c) throws IOException {
+    boolean doExtract(Context c, DocumentFile homeFolder) {
 
         // This is called when a usr format song has been loaded.
         // This tries to extract the relevant stuff and reformat the
@@ -18,7 +16,8 @@ class UsrConvert {
 
         // Initialise all the xml tags a song should have
         FullscreenActivity.mTitle = FullscreenActivity.songfilename;
-        LoadXML.initialiseSongTags();
+        LoadXML loadXML = new LoadXML();
+        loadXML.initialiseSongTags();
 
         // Break the temp variable into an array split by line
         // Check line endings are \n
@@ -32,9 +31,6 @@ class UsrConvert {
 
         String[] line = temp.split("\n");
         int numlines = line.length;
-        if (numlines < 0) {
-            numlines = 1;
-        }
 
         String temptitle = "";
         String tempauthor = "";
@@ -118,7 +114,7 @@ class UsrConvert {
         // Split the section titles up
         String[] sectiontitles = tempfields.split("/t");
 
-        String templyrics = "";
+        StringBuilder templyrics = new StringBuilder();
 
         // Go through the sections and add the appropriate tag
         for (int s=0;s<sections.length;s++) {
@@ -153,14 +149,14 @@ class UsrConvert {
             // Fix all line breaks
             sections[s] = sections[s].replace("/n", "\n ");
 
-            templyrics = templyrics + sections[s] + "\n";
+            templyrics.append(sections[s]).append("\n");
 
         }
 
 
         // Get rid of double line breaks
-        while (templyrics.contains("\n\n\n")) {
-            templyrics = templyrics.replace("\n\n\n","\n\n");
+        while (templyrics.toString().contains("\n\n\n")) {
+            templyrics = new StringBuilder(templyrics.toString().replace("\n\n\n", "\n\n"));
         }
 
 
@@ -189,7 +185,7 @@ class UsrConvert {
                 + "  <pitch></pitch>\r\n"
                 + "  <restrictions></restrictions>\r\n"
                 + "  <notes></notes>\r\n"
-                + "  <lyrics>" + templyrics.trim() + "</lyrics>\r\n"
+                + "  <lyrics>" + templyrics.toString().trim() + "</lyrics>\r\n"
                 + "  <linked_songs></linked_songs>\n"
                 + "  <pad_file></pad_file>\n"
                 + "  <custom_chords></custom_chords>\n"
@@ -213,23 +209,15 @@ class UsrConvert {
         Preferences.savePreferences();
 
         // Now write the modified song
-        FileOutputStream overWrite;
-
-        if (FullscreenActivity.whichSongFolder.equals(FullscreenActivity.mainfoldername)) {
-            overWrite = new FileOutputStream(FullscreenActivity.dir + "/"
-                    + FullscreenActivity.songfilename, false);
-        } else {
-            overWrite = new FileOutputStream(FullscreenActivity.dir + "/" + FullscreenActivity.whichSongFolder + "/"
-                    + FullscreenActivity.songfilename, false);
-        }
-        overWrite.write(FullscreenActivity.myXML.getBytes());
-        overWrite.flush();
-        overWrite.close();
+        StorageAccess storageAccess = new StorageAccess();
+        OutputStream overWrite = storageAccess.getOutputStream(c,homeFolder, "Songs",
+                FullscreenActivity.whichSongFolder, FullscreenActivity.songfilename);
+        storageAccess.writeBytes(c, overWrite, FullscreenActivity.myXML.getBytes());
 
         // Change the name of the song to remove usr file extension
         // (not needed)
         String newSongTitle = FullscreenActivity.songfilename;
-
+        String oldSongTitle = FullscreenActivity.songfilename;
         // Decide if a better song title is in the file
         if (temptitle.length() > 0) {
             newSongTitle = temptitle;
@@ -239,43 +227,17 @@ class UsrConvert {
         newSongTitle = newSongTitle.replace(".USR", "");
         newSongTitle = newSongTitle.replace(".txt", "");
 
-        File from;
-        File to;
+        storageAccess.renameAFile(c,homeFolder,"Songs",FullscreenActivity.whichSongFolder,oldSongTitle,newSongTitle);
 
-        if (FullscreenActivity.whichSongFolder.equals(FullscreenActivity.mainfoldername)) {
-            from = new File(FullscreenActivity.dir + "/"
-                    + FullscreenActivity.songfilename);
-            to = new File(FullscreenActivity.dir + "/" + newSongTitle);
-        } else {
-            from = new File(FullscreenActivity.dir + "/" + FullscreenActivity.whichSongFolder + "/"
-                    + FullscreenActivity.songfilename);
-            to = new File(FullscreenActivity.dir + "/" + FullscreenActivity.whichSongFolder + "/"
-                    + newSongTitle);
-        }
-
-        // IF THE FILENAME ALREADY EXISTS, REALLY SHOULD ASK THE USER FOR A NEW FILENAME
-        // OR append _ to the end - STILL TO DO!!!!!
-        while(to.exists()) {
-            newSongTitle = newSongTitle+"_";
-            if (FullscreenActivity.whichSongFolder.equals(FullscreenActivity.mainfoldername)) {
-                to = new File(FullscreenActivity.dir + "/" + newSongTitle);
-            } else {
-                to = new File(FullscreenActivity.dir + "/" + FullscreenActivity.whichSongFolder + "/" + newSongTitle);
-            }
-        }
-
-        // Do the renaming
-        boolean diditrename = from.renameTo(to);
-        if (!diditrename) {
-            Log.d ("UsrConvert","Error renaming");
-        }
         FullscreenActivity.songfilename = newSongTitle;
 
         // Load the songs
-        ListSongFiles.getAllSongFiles();
+        ListSongFiles listSongFiles = new ListSongFiles();
+
+        listSongFiles.getAllSongFiles(c, homeFolder);
 
         // Get the song indexes
-        ListSongFiles.getCurrentSongIndex();
+        listSongFiles.getCurrentSongIndex();
         Preferences.savePreferences();
 
         // Prepare the app to fix the song menu with the new file

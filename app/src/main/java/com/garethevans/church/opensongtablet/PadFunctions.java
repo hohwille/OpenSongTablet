@@ -1,9 +1,8 @@
 package com.garethevans.church.opensongtablet;
 
 import android.content.Context;
-
-import java.io.File;
-import java.net.URI;
+import android.net.Uri;
+import android.support.v4.provider.DocumentFile;
 
 class PadFunctions {
 
@@ -57,26 +56,30 @@ class PadFunctions {
         return result;
     }
 
-    static boolean isPadValid(Context c) {
+    boolean isPadValid(Context c, DocumentFile homeFolder) {
         // If we are using auto, key needs to be set
         // If we are using audio file link, it needs to exist
         // If we are set to OFF then nope!
 
         boolean isvalid = false;
-
+        StorageAccess sa = new StorageAccess();
+        DocumentFile pf;
+        Uri uri;
         if (FullscreenActivity.mPadFile.equals(c.getResources().getString(R.string.off))) {
             isvalid = false;
         } else if (FullscreenActivity.mPadFile.equals(c.getResources().getString(R.string.link_audio)) &&
                 !FullscreenActivity.mLinkAudio.isEmpty() && !FullscreenActivity.mLinkAudio.equals("")) {
-            String filetext = FullscreenActivity.mLinkAudio;
-            filetext = filetext.replace("file://","");
-            // If this is a localised file, we need to unlocalise it to enable it to be read
-            if (filetext.startsWith("../OpenSong/")) {
-                filetext = filetext.replace("../OpenSong/",FullscreenActivity.homedir+"/");
+            String filetext = FullscreenActivity.mLinkAudio;  // This will break from older audio files as they now need to be as a uri
+            if (filetext.contains("../OpenSong/")) {
+                filetext = filetext.replace("../OpenSong/","");
+                uri = sa.getFileLocationAsDocumentFile(c,homeFolder,"","",filetext).getUri();
+            } else {
+                // This will break from older audio files as they now need to be as a uri
+                uri = Uri.parse(filetext);
             }
-            filetext = "file://" + filetext;
-            File file = new File(URI.create(filetext).getPath());
-            isvalid = file.exists() && file.isFile();
+            pf = DocumentFile.fromSingleUri(c, uri);
+
+            isvalid = pf.exists() && pf.isFile() && pf.getType().contains("audio");
         } else if (!FullscreenActivity.mKey.isEmpty()){
             isvalid = true;
         }

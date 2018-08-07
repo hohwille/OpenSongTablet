@@ -6,10 +6,12 @@ import android.app.DialogFragment;
 import android.content.DialogInterface;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -30,14 +32,8 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.RandomAccessFile;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -89,7 +85,7 @@ public class PopUpImportExternalFile extends DialogFragment {
     String moveToFolder;
     String backupchosen;
     //Backup_Install backup_install;
-    FileInputStream inputStream;
+    InputStream inputStream;
     String scheme = "";
     ArrayList<String> backups = new ArrayList<>();
     String message = "";
@@ -98,6 +94,10 @@ public class PopUpImportExternalFile extends DialogFragment {
     FloatingActionButton closeMe;
     ProgressBar progressbar;
     TextView title;
+
+    // StorageStuff
+    StorageAccess storageAccess;
+    DocumentFile homeFolder;
 
     @Override
     public void onStart() {
@@ -135,6 +135,9 @@ public class PopUpImportExternalFile extends DialogFragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        storageAccess = new StorageAccess();
+        homeFolder = storageAccess.getHomeFolder(getActivity());
+
         getDialog().requestWindowFeature(Window.FEATURE_NO_TITLE);
         getDialog().setCanceledOnTouchOutside(true);
 
@@ -255,18 +258,24 @@ public class PopUpImportExternalFile extends DialogFragment {
 
     public void defaultSaveAction() {
         // Now check that the file doesn't already exist.  If it does alert the user to try again
-        File testfile;
+        DocumentFile testfile;
+        String name = "NEW";
+        try {
+            name = fileTitle_EditText.getText().toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         if (moveToFolder==null) {
             moveToFolder=getResources().getString(R.string.mainfoldername);
         }
 
-        if (moveToFolder.equals(getResources().getString(R.string.mainfoldername))) {
-            testfile = new File(FullscreenActivity.dir + "/" + fileTitle_EditText.getText().toString());
-        } else {
-            testfile = new File(FullscreenActivity.dir + "/" + moveToFolder + "/" + fileTitle_EditText.getText().toString());
-        }
+        testfile = storageAccess.getFileLocationAsDocumentFile(getActivity(), homeFolder,"Songs",
+                moveToFolder, name);
+
         if (FullscreenActivity.file_type.equals(getResources().getString(R.string.options_set))) {
-            testfile = new File(FullscreenActivity.dirsets + "/" + fileTitle_EditText.getText().toString());
+            testfile = storageAccess.getFileLocationAsDocumentFile(getActivity(), homeFolder, "Sets",
+                    moveToFolder, name);
         }
 
         // Does it exist?
@@ -274,20 +283,14 @@ public class PopUpImportExternalFile extends DialogFragment {
             Toast.makeText(getActivity(), getResources().getString(R.string.file_exists), Toast.LENGTH_LONG).show();
         } else {
             FullscreenActivity.myToastMessage = getResources().getString(R.string.ok);
-            File from = new File(FullscreenActivity.file_location);
+            Uri from = Uri.parse(FullscreenActivity.file_location);
 
             try {
-                InputStream in = new FileInputStream(from);
-                OutputStream out = new FileOutputStream(testfile);
+                InputStream in = storageAccess.getInputStreamFromUri(getActivity(),from);
+                OutputStream out = storageAccess.getOutputStreamFromUri(getActivity(), testfile.getUri());
 
                 // Transfer bytes from in to out
-                byte[] buf = new byte[1024];
-                int len;
-                while ((len = in.read(buf)) > 0) {
-                    out.write(buf, 0, len);
-                }
-                in.close();
-                out.close();
+                storageAccess.copyFile(getActivity(),in,out);
 
                 if (!FullscreenActivity.file_type.equals(getResources().getString(R.string.options_set))) {
                     FullscreenActivity.songfilename = FullscreenActivity.file_name;
@@ -437,25 +440,27 @@ public class PopUpImportExternalFile extends DialogFragment {
         String verses = FullscreenActivity.scripture_title.replace(translation, "");
         // Since the scripture is one big line, split it up a little (50 chars max)
         String[] scripture = FullscreenActivity.mScripture.split(" ");
-        String scriptureline = "";
+        StringBuilder scriptureline = new StringBuilder();
         ArrayList<String> scripturearray = new ArrayList<>();
 
         for (String aScripture : scripture) {
-            scriptureline = scriptureline + aScripture;
+            scriptureline.append(aScripture);
             if (scriptureline.length() > 50) {
-                scripturearray.add(scriptureline);
-                scriptureline = "";
+                scripturearray.add(scriptureline.toString());
+                scriptureline = new StringBuilder();
             }
         }
-        scripturearray.add(scriptureline);
+        scripturearray.add(scriptureline.toString());
 
         // Convert the array back into one string separated by new lines
         FullscreenActivity.mScripture = "";
+        StringBuilder sb = new StringBuilder();
         for (int x=0;x<scripturearray.size();x++) {
-            FullscreenActivity.mScripture = FullscreenActivity.mScripture + scripturearray.get(x) + "\n";
+            sb.append(scripturearray.get(x));
+            sb.append("\n");
         }
 
-        FullscreenActivity.mScripture = FullscreenActivity.mScripture.trim();
+        FullscreenActivity.mScripture = sb.toString().trim();
 
         String text = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                 "<song>" +
@@ -471,17 +476,14 @@ public class PopUpImportExternalFile extends DialogFragment {
                 "</song>";
 
         // Write the file
-        String filename = FullscreenActivity.homedir + "/" + "Scriptures/YouVerion";
-        File newfile = new File(filename);
-        if (!newfile.mkdirs()) {
-            Log.d("d","Couldn't make scriptue folder");
-        }
+        // Create the Scriptures folder if it doesn't exist
+        storageAccess.tryCreateDirectory(getActivity(), homeFolder,"Scriptures","");
+        DocumentFile df = storageAccess.getFileLocationAsDocumentFile(getActivity(), homeFolder,
+                "Scriptures","","YouVersion");
 
         try {
-            FileOutputStream overWrite = new FileOutputStream(filename, false);
-            overWrite.write(text.getBytes());
-            overWrite.flush();
-            overWrite.close();
+            OutputStream overWrite = storageAccess.getOutputStreamFromUri(getActivity(),df.getUri());
+            storageAccess.writeBytes(getActivity(),overWrite,text.getBytes());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -553,21 +555,16 @@ public class PopUpImportExternalFile extends DialogFragment {
         if (!FullscreenActivity.file_name.endsWith(".backup") && !FullscreenActivity.file_name.endsWith(".osb")) {
         try {
             InputStream is = getActivity().getContentResolver().openInputStream(FullscreenActivity.file_uri);
-            OutputStream os = new FileOutputStream(FullscreenActivity.homedir + "/" + FullscreenActivity.file_name);
-            FullscreenActivity.file_location = FullscreenActivity.homedir + "/" + FullscreenActivity.file_name;
-            byte[] buffer = new byte[4096];
-            int count;
-            if (is != null) {
-                while ((count = is.read(buffer)) > 0) {
-                    os.write(buffer, 0, count);
-                }
-            }
-            os.close();
-            if (is != null) {
-                is.close();
-            }
-            inputStream = new FileInputStream(FullscreenActivity.file_location);
-            FullscreenActivity.file_contents = LoadXML.readTextFile(inputStream);
+            OutputStream os = storageAccess.getOutputStream(getActivity(), homeFolder,"","",
+                    FullscreenActivity.file_name);
+            FullscreenActivity.file_location = storageAccess.getFileLocationAsUri(getActivity(), homeFolder,
+                    "", "",
+                    FullscreenActivity.file_name).toString();
+            storageAccess.copyFile(getActivity(),is,os);
+            inputStream = storageAccess.getInputStreamFromUri(getActivity(),
+                    storageAccess.getFileLocationAsUri(getActivity(), homeFolder,"", "",
+                    FullscreenActivity.file_name));
+            FullscreenActivity.file_contents = storageAccess.readTextFile(getActivity(),inputStream);
         } catch (Exception e) {
             // Error
             e.printStackTrace();
@@ -590,69 +587,70 @@ public class PopUpImportExternalFile extends DialogFragment {
                     !FullscreenActivity.file_name.endsWith(".gif") &&
                     !FullscreenActivity.file_name.endsWith(".zip") &&
                     !FullscreenActivity.file_name.endsWith(".sqlite")) {
-                inputStream = new FileInputStream(FullscreenActivity.file_location);
-                FullscreenActivity.file_contents = LoadXML.readTextFile(inputStream);
+                inputStream = storageAccess.getInputStreamFromUri(getActivity(),
+                        Uri.parse(FullscreenActivity.file_location));
+                FullscreenActivity.file_contents = storageAccess.readTextFile(getActivity(),inputStream);
             }
 
-        } catch (FileNotFoundException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public void copyFile() {
         // Move the file to the correct location
-        moveToFolder = FullscreenActivity.homedir.toString();
-        File importIt = new File (FullscreenActivity.file_location);
-        File newFile = new File (moveToFolder + "/" + FullscreenActivity.file_name);
-        if (importIt.renameTo(newFile)) {
-            Log.d("d","Move successful");
-        } else {
-            //have to copy instead
-            try {
-                if (!newFile.createNewFile()) {
-                    Log.d("d","Error creating file");
-                }
-                final RandomAccessFile file1 = new RandomAccessFile(importIt, "r");
-                final RandomAccessFile file2 = new RandomAccessFile(newFile, "rw");
-                file2.getChannel().write(file1.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, importIt.length()));
-                file1.close();
-                file2.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+        DocumentFile importIt = DocumentFile.fromSingleUri(getActivity(), Uri.parse(FullscreenActivity.file_location));
+        DocumentFile newFile = storageAccess.getFileLocationAsDocumentFile(getActivity(), homeFolder,
+                "","",FullscreenActivity.file_name);
+        storageAccess.moveAFile(getActivity(),importIt, newFile);
     }
 
     public void showSongFolders() {
-        ListSongFiles.getAllSongFolders();
-        ArrayAdapter<String> folders = new ArrayAdapter<>(getActivity(), R.layout.my_spinner, FullscreenActivity.mSongFolderNames);
-        chooseFolder_Spinner.setAdapter(folders);
-        moveToFolder = FullscreenActivity.mSongFolderNames[0];
-        chooseFolder_Spinner.setSelection(0);
-        chooseFolder_Spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        //ListSongFiles listSongFiles = new ListSongFiles();
+        //listSongFiles.getAllSongFolders(getActivity(), homeFolder);
+        new Thread(new Runnable() {
             @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                try {
-                    //moveToFolder = newtempfolders.get(position);
-                    moveToFolder = FullscreenActivity.mSongFolderNames[position];
-                } catch (Exception e) {
-                    // Can't find folder
-                    parent.setSelection(0);
-                }
+            public void run() {
+                storageAccess.getSongFolderContents(getActivity());
+
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        ArrayAdapter<String> folders = new ArrayAdapter<>(getActivity(), R.layout.my_spinner, FullscreenActivity.mSongFolderNames);
+                        chooseFolder_Spinner.setAdapter(folders);
+                        moveToFolder = FullscreenActivity.mSongFolderNames[0];
+                        chooseFolder_Spinner.setSelection(0);
+                        chooseFolder_Spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                            @Override
+                            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                                try {
+                                    //moveToFolder = newtempfolders.get(position);
+                                    moveToFolder = FullscreenActivity.mSongFolderNames[position];
+                                } catch (Exception e) {
+                                    // Can't find folder
+                                    parent.setSelection(0);
+                                }
+                            }
+
+                            @Override
+                            public void onNothingSelected(AdapterView<?> parent) {}
+
+                        });
+                    }
+                });
             }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
-
-        });
+        }).run();
     }
 
     public boolean showOSFiles() {
         // Populate the list
-        File[] backupfilecheck = FullscreenActivity.homedir.listFiles();
+        DocumentFile backupfilelocation = storageAccess.getFileLocationAsDocumentFile(getActivity(), homeFolder,
+                "","","");
+        DocumentFile[] backupfilecheck = backupfilelocation.listFiles();
         if (backupfilecheck != null) {
-            for (File aBackupfilecheck : backupfilecheck) {
-                if (aBackupfilecheck!=null && aBackupfilecheck.isFile() && aBackupfilecheck.getPath().endsWith(".backup")) {
+            for (DocumentFile aBackupfilecheck : backupfilecheck) {
+                if (aBackupfilecheck!=null && aBackupfilecheck.isFile()
+                        && aBackupfilecheck.getName().endsWith(".backup")) {
                     backups.add(aBackupfilecheck.getName());
                 }
             }
@@ -686,10 +684,12 @@ public class PopUpImportExternalFile extends DialogFragment {
 
     public boolean showOSBFiles() {
         // Populate the list
-        File[] backupfilecheck = FullscreenActivity.homedir.listFiles();
+        DocumentFile backupsfolder = storageAccess.getFileLocationAsDocumentFile(getActivity(), homeFolder,
+                "","","");
+        DocumentFile[] backupfilecheck = backupsfolder.listFiles();
         if (backupfilecheck != null) {
-            for (File aBackupfilecheck : backupfilecheck) {
-                if (aBackupfilecheck!=null && aBackupfilecheck.isFile() && aBackupfilecheck.getPath().endsWith(".osb")) {
+            for (DocumentFile aBackupfilecheck : backupfilecheck) {
+                if (aBackupfilecheck!=null && aBackupfilecheck.isFile() && aBackupfilecheck.getName().endsWith(".osb")) {
                     backups.add(aBackupfilecheck.getName());
                 }
             }
@@ -744,18 +744,14 @@ public class PopUpImportExternalFile extends DialogFragment {
     }
     @SuppressLint("StaticFieldLeak")
     private class ImportOnSongBackup extends AsyncTask<String, Void, String> {
-
         @Override
         protected String doInBackground(String... params) {
             message = getActivity().getResources().getString(R.string.import_onsong_done);
+            // Check the OnSong directory exists, if not, create it
+            storageAccess.tryCreateDirectory(getActivity(), homeFolder,"Songs","OnSong");
 
-            if (!FullscreenActivity.dironsong.exists()) {
-                // No OnSong folder exists - make it
-                PopUpStorageFragment.createDirectory(FullscreenActivity.dironsong);
-            }
-
-            File dbfile = new File(FullscreenActivity.homedir + "/OnSong.Backup.sqlite3");
-
+            DocumentFile dbfile = storageAccess.getFileLocationAsDocumentFile(getActivity(), homeFolder,
+                    "","","OnSong.Backup.sqlite3");
             if (dbfile.exists()) {
                 if (!dbfile.delete()) {
                     Log.d("d","Error deleting db file");
@@ -766,7 +762,7 @@ public class PopUpImportExternalFile extends DialogFragment {
             ZipArchiveInputStream zis;
             String filename;
             try {
-                is = new FileInputStream(FullscreenActivity.homedir + "/" + backupchosen);
+                is = storageAccess.getInputStream(getActivity(), homeFolder,"","",backupchosen);
                 zis = new ZipArchiveInputStream(new BufferedInputStream(is),"UTF-8",false);
 
                 ZipArchiveEntry ze;
@@ -775,19 +771,19 @@ public class PopUpImportExternalFile extends DialogFragment {
                     int count;
                     filename = ze.getName();
                     Log.d("d", "filename=" + filename);
-                    Log.d("d", "ze=" + ze);
                     if (!filename.startsWith("Media")) {
                         // The Media folder throws errors (it has zero length files sometimes
                         // It also contains stuff that is irrelevant for OpenSongApp importing
                         // Only process stuff that isn't in that folder!
                         // It will also ignore any song starting with 'Media' - not worth a check for now!
 
-                        FileOutputStream fout;
+                        OutputStream fout;
                         if (filename.equals("OnSong.Backup.sqlite3") || filename.equals("OnSong.sqlite3")) {
-                            //fout = new FileOutputStream(FullscreenActivity.homedir + "/" + filename);
-                            fout = new FileOutputStream(FullscreenActivity.homedir + "/" + "OnSong.Backup.sqlite3");
+                            fout = storageAccess.getOutputStream(getActivity(), homeFolder, "", "",
+                                    "OnSong.Backup.sqlite3");
                         } else {
-                            fout = new FileOutputStream(FullscreenActivity.dironsong + "/" + filename);
+                            fout = storageAccess.getOutputStream(getActivity(), homeFolder,"Songs",
+                                    "OnSong", filename);
                         }
 
                         final BufferedOutputStream out = new BufferedOutputStream(fout);
@@ -802,7 +798,6 @@ public class PopUpImportExternalFile extends DialogFragment {
                             e.printStackTrace();
                         } finally {
                             try {
-                                fout.getFD().sync();
                                 out.close();
                             } catch (Exception e) {
                                 e.printStackTrace();
@@ -819,7 +814,7 @@ public class PopUpImportExternalFile extends DialogFragment {
             }
 
             if (dbfile.exists()) {
-                SQLiteDatabase db = SQLiteDatabase.openOrCreateDatabase(dbfile, null);
+                SQLiteDatabase db = SQLiteDatabase.openOrCreateDatabase(dbfile.getUri().getPath(),null);
                 // Go through each row and read in the content field
                 // Save the files with the .onsong extension
 
@@ -847,11 +842,10 @@ public class PopUpImportExternalFile extends DialogFragment {
 
                         try {
                             // Now write the modified song
-                            FileOutputStream overWrite = new FileOutputStream(FullscreenActivity.dironsong +
-                                    "/" + str_title + ".onsong", false);
-                            overWrite.write(str_content.getBytes());
-                            overWrite.flush();
-                            overWrite.close();
+                            OutputStream overWrite = storageAccess.getOutputStream(getActivity(), homeFolder,
+                                    "Songs","OnSong",
+                                    str_title + ".onsong");
+                            storageAccess.writeBytes(getActivity(),overWrite,str_content.getBytes());
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -919,19 +913,19 @@ public class PopUpImportExternalFile extends DialogFragment {
         protected String doInBackground(String... strings) {
             ZipInputStream zis = null;
             try {
-                zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(FullscreenActivity.homedir+"/"+backupchosen)));
+                InputStream is = storageAccess.getInputStream(getActivity(),homeFolder,"",
+                        "",backupchosen);
+                zis = new ZipInputStream(new BufferedInputStream(is));
                 ZipEntry ze;
                 int count;
                 byte[] buffer = new byte[8192];
                 while ((ze = zis.getNextEntry()) != null) {
-                    File file = new File(FullscreenActivity.dir, ze.getName());
-                    File dir = ze.isDirectory() ? file : file.getParentFile();
-                    if (!dir.isDirectory() && !dir.mkdirs())
-                        throw new FileNotFoundException("Failed to ensure directory: " +
-                                dir.getAbsolutePath());
-                    if (ze.isDirectory())
-                        continue;
-                    FileOutputStream fout = new FileOutputStream(file);
+                    // If this is a directory, create it if it doesn't exist
+                    if (ze.isDirectory()) {
+                        storageAccess.tryCreateDirectory(getActivity(), homeFolder,"Songs",ze.getName());
+                    }
+                    OutputStream fout = storageAccess.getOutputStream(getActivity(), homeFolder,"Songs",
+                            "",ze.getName());
                     try {
                         while ((count = zis.read(buffer)) != -1)
                             fout.write(buffer, 0, count);
@@ -942,11 +936,6 @@ public class PopUpImportExternalFile extends DialogFragment {
                             e.printStackTrace();
                         }
                     }
-                    long time = ze.getTime();
-                    if (time > 0)
-                        if (!file.setLastModified(time)) {
-                            Log.d("d", "Couldn't get last modified time");
-                        }
                 }
             } catch (Exception e) {
                 e.printStackTrace();

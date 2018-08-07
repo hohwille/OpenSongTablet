@@ -5,6 +5,7 @@ import android.app.DialogFragment;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,6 +28,9 @@ public class PopUpChooseFolderFragment extends DialogFragment {
     }
 
     private MyInterface mListener;
+
+    StorageAccess storageAccess;
+    DocumentFile homeFolder;
 
     @Override
     @SuppressWarnings("deprecation")
@@ -67,6 +71,9 @@ public class PopUpChooseFolderFragment extends DialogFragment {
         getDialog().requestWindowFeature(Window.FEATURE_NO_TITLE);
         getDialog().setCanceledOnTouchOutside(true);
 
+        storageAccess = new StorageAccess();
+        homeFolder = storageAccess.getHomeFolder(getActivity());
+
         final View V = inflater.inflate(R.layout.popup_choosefolder, container, false);
 
         TextView title = V.findViewById(R.id.dialogtitle);
@@ -86,29 +93,48 @@ public class PopUpChooseFolderFragment extends DialogFragment {
         lv = V.findViewById(R.id.songfolders_ListView);
 
         // Update the song folders
-        FullscreenActivity.songfilelist = new SongFileList();
-        ListSongFiles.getAllSongFolders();
+        //FullscreenActivity.songfilelist = new SongFileList();
+        //ListSongFiles listSongFiles = new ListSongFiles();
+        //listSongFiles.getAllSongFolders(getActivity(), homeFolder);
+        updateTheFolderView();
 
-        if (FullscreenActivity.mSongFolderNames!=null) {
-            ArrayAdapter<String> lva = new ArrayAdapter<>(getActivity(),
-                    R.layout.songlistitem, FullscreenActivity.mSongFolderNames);
-            lv.setAdapter(lva);
-            lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                @Override
-                public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                    FullscreenActivity.whichSongFolder = FullscreenActivity.mSongFolderNames[i];
-                    //Preferences.savePreferences();  // Remove this to avoid bugs if user is only browsing
-                    if (mListener != null) {
-                        mListener.prepareSongMenu();
-                    }
-                    PopUpChooseFolderFragment.this.dismiss();
-                }
-            });
-        }
 
         PopUpSizeAndAlpha.decoratePopUp(getActivity(),getDialog());
 
         return V;
+    }
+
+    void updateTheFolderView () {
+        // Run this on a separate thread
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                //Update the song/folder list
+                storageAccess.getSongFolderContents(getActivity());
+
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (FullscreenActivity.mSongFolderNames!=null) {
+                            ArrayAdapter<String> lva = new ArrayAdapter<>(getActivity(),
+                                    R.layout.songlistitem, FullscreenActivity.mSongFolderNames);
+                            lv.setAdapter(lva);
+                            lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                                @Override
+                                public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                                    FullscreenActivity.whichSongFolder = FullscreenActivity.mSongFolderNames[i];
+                                    //Preferences.savePreferences();  // Remove this to avoid bugs if user is only browsing
+                                    if (mListener != null) {
+                                        mListener.prepareSongMenu();
+                                    }
+                                    PopUpChooseFolderFragment.this.dismiss();
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+        }).run();
     }
 
     @Override

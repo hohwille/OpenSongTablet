@@ -1,6 +1,5 @@
 package com.garethevans.church.opensongtablet;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -13,7 +12,7 @@ import java.util.Locale;
 
 import static com.garethevans.church.opensongtablet.FullscreenActivity.myPreferences;
 
-public class Preferences extends Activity {
+public class Preferences {
 
     // Set the default colours here
     static int default_metronomeColor = 0xffaa1212;
@@ -57,7 +56,7 @@ public class Preferences extends Activity {
         try {
             FullscreenActivity.whichSongFolder = myPreferences.getString("whichSongFolder", FullscreenActivity.mainfoldername);
         } catch (Exception e) {
-            FullscreenActivity.whichSongFolder = "MAIN";
+            FullscreenActivity.whichSongFolder = FullscreenActivity.mainfoldername;
         }
     }
 
@@ -374,7 +373,7 @@ public class Preferences extends Activity {
             FullscreenActivity.presoAlpha = myPreferences.getFloat("presoAlpha", 1.0f);
             FullscreenActivity.presoAutoScale = myPreferences.getBoolean("presoAutoScale", true);
             FullscreenActivity.presoFontSize = myPreferences.getInt("presoFontSize", 12);
-            FullscreenActivity.presoInfoAlign = myPreferences.getInt("presoInfoAlign", Gravity.RIGHT);
+            FullscreenActivity.presoInfoAlign = myPreferences.getInt("presoInfoAlign", Gravity.END);
             FullscreenActivity.presoLyricsAlign = myPreferences.getInt("presoLyricsAlign", Gravity.CENTER_HORIZONTAL);
             FullscreenActivity.presoMaxFontSize = myPreferences.getInt("presoMaxFontSize", 40);
             FullscreenActivity.presoShowChords = myPreferences.getBoolean("presoShowChords", false);
@@ -877,7 +876,7 @@ public class Preferences extends Activity {
 
     /* Values stored in Prefences alphabetically listed:
     Variable name           Type        What
-    chosenstorage           String      The uri of the document tree (Storage Access Framework)
+    treeUri                 String      The uri of the document tree (Storage Access Framework)
     lastUsedVersion         int         The app version number the last time the app ran
     */
 }

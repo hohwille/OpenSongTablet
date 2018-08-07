@@ -62,6 +62,8 @@ public class PopUpAutoscrollFragment extends DialogFragment {
     EditText popupautoscroll_duration;
     FloatingActionButton uselinkaudiolength_ImageButton;
 
+    AutoScrollFunctions autoScrollFunctions;
+
     boolean mStopHandler = false;
     Handler mHandler = new Handler();
     Runnable runnable = new Runnable() {
@@ -83,6 +85,8 @@ public class PopUpAutoscrollFragment extends DialogFragment {
         if (savedInstanceState != null) {
             this.dismiss();
         }
+        autoScrollFunctions = new AutoScrollFunctions();
+
         getDialog().setCanceledOnTouchOutside(true);
         getDialog().requestWindowFeature(Window.FEATURE_NO_TITLE);
         mListener.pageButtonAlpha("autoscroll");
@@ -112,7 +116,7 @@ public class PopUpAutoscrollFragment extends DialogFragment {
         uselinkaudiolength_ImageButton = V.findViewById(R.id.uselinkaudiolength_ImageButton);
         popupautoscroll_delay.setMax(FullscreenActivity.default_autoscroll_predelay_max);
         // Set up current values
-        AutoScrollFunctions.getAutoScrollTimes();
+        autoScrollFunctions.getAutoScrollTimes();
         String text;
         if (FullscreenActivity.autoScrollDelay < 0) {
             popupautoscroll_delay.setProgress(0);
@@ -236,7 +240,7 @@ public class PopUpAutoscrollFragment extends DialogFragment {
                 FullscreenActivity.autoScrollDuration = -1;
             }
             PopUpEditSongFragment.prepareSongXML();
-            PopUpEditSongFragment.justSaveSongXML();
+            PopUpEditSongFragment.justSaveSongXML(getActivity());
             FullscreenActivity.myToastMessage = getActivity().getResources().getString(R.string.savesong) + " - " +
                     getActivity().getResources().getString(R.string.ok);
             ShowToast.showToast(getActivity());
@@ -250,7 +254,7 @@ public class PopUpAutoscrollFragment extends DialogFragment {
     }
 
     public void grabLinkAudioTime() {
-        AutoScrollFunctions.getAudioLength(getActivity());
+        autoScrollFunctions.getAudioLength(getActivity());
         if (FullscreenActivity.audiolength>-1) {
             // If this is a valid audio length, set the mDuration value
             FullscreenActivity.mDuration = "" + FullscreenActivity.audiolength;

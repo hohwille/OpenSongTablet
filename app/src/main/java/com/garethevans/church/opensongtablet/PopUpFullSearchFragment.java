@@ -267,7 +267,9 @@ public class PopUpFullSearchFragment extends DialogFragment implements SearchVie
     @Override
     public boolean onQueryTextSubmit(String newText) {
         InputMethodManager imm = (InputMethodManager)getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(mSearchView.getWindowToken(), 0);
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(mSearchView.getWindowToken(), 0);
+        }
         mListView.requestFocus();
         if (mListView.getCount() == 0) {
             dismiss();

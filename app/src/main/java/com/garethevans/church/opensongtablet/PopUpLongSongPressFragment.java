@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -48,6 +49,9 @@ public class PopUpLongSongPressFragment extends DialogFragment {
     Button shareSong_Button;
     Button editSong_Button;
 
+    StorageAccess storageAccess;
+    DocumentFile homeFolder;
+
     @Override
     public void onStart() {
         super.onStart();
@@ -70,6 +74,9 @@ public class PopUpLongSongPressFragment extends DialogFragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         getDialog().requestWindowFeature(Window.FEATURE_NO_TITLE);
         getDialog().setCanceledOnTouchOutside(true);
+
+        storageAccess = new StorageAccess();
+        homeFolder = storageAccess.getHomeFolder(getActivity());
 
         View V = inflater.inflate(R.layout.popup_longsongpress, container, false);
 
@@ -101,7 +108,7 @@ public class PopUpLongSongPressFragment extends DialogFragment {
         addSongToSet_Button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                addtoSet(getActivity());
+                addtoSet(getActivity(), homeFolder);
                 if (mListener!=null) {
                     mListener.songLongClick();
                 }
@@ -159,7 +166,7 @@ public class PopUpLongSongPressFragment extends DialogFragment {
         this.dismiss();
     }
 
-    public static void addtoSet(Context c) {
+    public void addtoSet(Context c, DocumentFile homeFolder) {
         FullscreenActivity.addingtoset = true;
 
         // If the song is in .pro, .onsong, .txt format, tell the user to convert it first
@@ -187,9 +194,12 @@ public class PopUpLongSongPressFragment extends DialogFragment {
             if (FullscreenActivity.ccli_automatic) {
                 // Now we need to get the song info quickly to log it correctly
                 // as this might not be the song loaded
-                String[] vals = LoadXML.getCCLILogInfo(c, FullscreenActivity.whichSongFolder, FullscreenActivity.songfilename);
+                LoadXML loadXML = new LoadXML();
+                String[] vals = loadXML.getCCLILogInfo(c, homeFolder,
+                        FullscreenActivity.whichSongFolder, FullscreenActivity.songfilename);
                 if (vals.length==4 && vals[0]!=null && vals[1]!=null && vals[2]!=null && vals[3]!=null) {
-                    PopUpCCLIFragment.addUsageEntryToLog(FullscreenActivity.whichSongFolder + "/" + FullscreenActivity.songfilename,
+                    PopUpCCLIFragment popUpCCLIFragment = new PopUpCCLIFragment();
+                    popUpCCLIFragment.addUsageEntryToLog(c,FullscreenActivity.whichSongFolder + "/" + FullscreenActivity.songfilename,
                             vals[0], vals[1], vals[2], vals[3], "6"); // Printed
                 }
             }

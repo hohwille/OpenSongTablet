@@ -1,10 +1,12 @@
 package com.garethevans.church.opensongtablet;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.DialogFragment;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,7 +16,6 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import java.io.File;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,7 +25,10 @@ public class PopUpFileChooseFragment extends DialogFragment {
     static Collator coll;
     static ArrayList<String> tempFoundFiles;
     static String[] foundFiles;
-    File[] tempmyFiles;
+    DocumentFile[] tempmyFiles;
+
+    StorageAccess storageAccess;
+    DocumentFile homeFolder;
 
     static PopUpFileChooseFragment newInstance() {
         PopUpFileChooseFragment frag;
@@ -79,9 +83,12 @@ public class PopUpFileChooseFragment extends DialogFragment {
         }
     }
 
+    @SuppressLint("SetTextI18n")
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
+        storageAccess = new StorageAccess();
+        homeFolder = storageAccess.getHomeFolder(getActivity());
         getDialog().requestWindowFeature(Window.FEATURE_NO_TITLE);
         getDialog().setCanceledOnTouchOutside(true);
 
@@ -99,56 +106,56 @@ public class PopUpFileChooseFragment extends DialogFragment {
             case "logo":
                 myTitle = getActivity().getResources().getString(R.string.logo);
                 filechecks = imagefiletypes;
-                location.setText(FullscreenActivity.dirbackgrounds.toString());
+                location.setText("OpenSong/Backgrounds/");
                 listvidsandimages();
                 break;
 
             case "image1":
                 myTitle = getActivity().getResources().getString(R.string.choose_image1);
                 filechecks = imagefiletypes;
-                location.setText(FullscreenActivity.dirbackgrounds.toString());
+                location.setText("OpenSong/Backgrounds/");
                 listvidsandimages();
                 break;
 
             case "image2":
                 myTitle = getActivity().getResources().getString(R.string.choose_image2);
                 filechecks = imagefiletypes;
-                location.setText(FullscreenActivity.dirbackgrounds.toString());
+                location.setText("OpenSong/Backgrounds/");
                 listvidsandimages();
                 break;
 
             case "video1":
                 myTitle = getActivity().getResources().getString(R.string.choose_video1);
                 filechecks = videofiletypes;
-                location.setText(FullscreenActivity.dirbackgrounds.toString());
+                location.setText("OpenSong/Backgrounds/");
                 listvidsandimages();
                 break;
 
             case "video2":
                 myTitle = getActivity().getResources().getString(R.string.choose_video2);
                 filechecks = videofiletypes;
-                location.setText(FullscreenActivity.dirbackgrounds.toString());
+                location.setText("OpenSong/Backgrounds/");
                 listvidsandimages();
                 break;
 
             case "customnote":
                 myTitle = getResources().getString(R.string.options_set_load) + " - " + getResources().getString(R.string.note);
                 filechecks = null;
-                location.setText(FullscreenActivity.dircustomnotes.toString());
+                location.setText("OpenSong/Notes/");
                 listnotes();
                 break;
 
             case "customslide":
                 myTitle = getResources().getString(R.string.options_set_load) + " - " + getResources().getString(R.string.slide);
                 filechecks = null;
-                location.setText(FullscreenActivity.dircustomslides.toString());
+                location.setText("OpenSong/Slides/");
                 listslides();
                 break;
 
             case "customimage":
                 myTitle = getResources().getString(R.string.options_set_load) + " - " + getResources().getString(R.string.image_slide);
                 filechecks = null;
-                location.setText(FullscreenActivity.dircustomimages.toString());
+                location.setText("OpenSong/Images/");
                 listimageslides();
                 break;
 
@@ -259,31 +266,32 @@ public class PopUpFileChooseFragment extends DialogFragment {
     }
 
     public void listimageslides() {
-        File location = new File(FullscreenActivity.homedir + "/Images");
+        DocumentFile location = storageAccess.tryCreateDirectory(getActivity(),homeFolder,"Images","");
         tempmyFiles = location.listFiles();
         processfilelist();
     }
 
     public void listslides() {
-        File location = new File(FullscreenActivity.homedir + "/Slides");
+        DocumentFile location = storageAccess.tryCreateDirectory(getActivity(),homeFolder,"Slides","");
         tempmyFiles = location.listFiles();
         processfilelist();
     }
 
     public void listscriptures() {
-        File location = new File(FullscreenActivity.homedir + "/Scripture");
+        DocumentFile location = storageAccess.tryCreateDirectory(getActivity(),homeFolder,"Scripture","");
         tempmyFiles = location.listFiles();
         processfilelist();
     }
 
     public void listnotes() {
-        File location = new File(FullscreenActivity.homedir + "/Notes");
+        DocumentFile location = storageAccess.tryCreateDirectory(getActivity(),homeFolder,"Notes","");
         tempmyFiles = location.listFiles();
         processfilelist();
     }
 
     public void listvidsandimages() {
-        tempmyFiles = FullscreenActivity.dirbackgrounds.listFiles();
+        DocumentFile location = storageAccess.tryCreateDirectory(getActivity(),homeFolder,"Backgrounds","");
+        tempmyFiles =location.listFiles();
         processfilelist();
     }
 
@@ -292,7 +300,7 @@ public class PopUpFileChooseFragment extends DialogFragment {
         tempFoundFiles = new ArrayList<>();
 
         // Go through each file
-        for (File tempmyFile : tempmyFiles) {
+        for (DocumentFile tempmyFile : tempmyFiles) {
 
             // If we need to check the filetype and it is ok, add it to the array
             if (filechecks != null && filechecks.length > 0) {

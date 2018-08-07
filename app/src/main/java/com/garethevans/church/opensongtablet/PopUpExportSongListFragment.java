@@ -5,6 +5,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,7 +14,6 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import java.io.File;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,6 +27,8 @@ public class PopUpExportSongListFragment extends DialogFragment {
     }
 
     ListView songDirectoy_ListView;
+    StorageAccess storageAccess;
+    DocumentFile homeFolder;
 
     @Override
     public void onStart() {
@@ -50,6 +52,9 @@ public class PopUpExportSongListFragment extends DialogFragment {
         View V = inflater.inflate(R.layout.popup_exportsonglist, container, false);
         getDialog().requestWindowFeature(Window.FEATURE_NO_TITLE);
         getDialog().setCanceledOnTouchOutside(true);
+
+        storageAccess = new StorageAccess();
+        homeFolder = storageAccess.getHomeFolder(getActivity());
 
         TextView title = V.findViewById(R.id.dialogtitle);
         title.setText(getActivity().getResources().getString(R.string.exportsongdirectory));
@@ -104,47 +109,44 @@ public class PopUpExportSongListFragment extends DialogFragment {
 
     public void prepareSongDirectory(ArrayList<String> directories) {
         // For each selected directory, list the song that exist.
-        String songContents = "";
+        StringBuilder songContents = new StringBuilder();
 
         for (String directory:directories) {
-            File directory_file;
-            if (directory.equals(FullscreenActivity.mainfoldername)) {
-                directory_file = FullscreenActivity.dir;
-            } else {
-                directory_file = new File(FullscreenActivity.dir + "/" + directory);
-            }
-            File[] contents;
+            DocumentFile directory_file = storageAccess.getFileLocationAsDocumentFile(getActivity(),
+                    homeFolder,"Songs", directory, "");
+
+            DocumentFile[] contents;
             if (directory_file.exists()) {
                 contents = directory_file.listFiles();
                 ArrayList<String> files_ar = new ArrayList<>();
-                for (File s:contents) {
+                for (DocumentFile s:contents) {
                     if (s.isFile()) {
                         files_ar.add(s.getName());
                     }
                 }
 
-                songContents += getActivity().getString(R.string.songsinfolder) + " \"" + directory + "\":\n\n";
+                songContents.append(getActivity().getString(R.string.songsinfolder)).append(" \"").append(directory).append("\":\n\n");
 
                 try {
                     Collator coll = Collator.getInstance(FullscreenActivity.locale);
                     coll.setStrength(Collator.SECONDARY);
                     Collections.sort(files_ar, coll);
                     for (int l=0;l<files_ar.size();l++) {
-                        songContents += files_ar.get(l) + "\n";
+                        songContents.append(files_ar.get(l)).append("\n");
                     }
                 } catch (Exception e) {
                     // Error sorting
                 }
 
             }
-            songContents += "\n\n\n\n";
+            songContents.append("\n\n\n\n");
         }
 
         Intent intent = new Intent(Intent.ACTION_SEND);
         intent.setType("text/plain");
         intent.putExtra(android.content.Intent.EXTRA_SUBJECT, getActivity().getString(R.string.app_name) + " " +
                 getActivity().getString(R.string.exportsongdirectory));
-        intent.putExtra(Intent.EXTRA_TEXT, songContents);
+        intent.putExtra(Intent.EXTRA_TEXT, songContents.toString());
 
         String title = getActivity().getResources().getString(R.string.options_song_export);
         Intent chooser = Intent.createChooser(intent, title);

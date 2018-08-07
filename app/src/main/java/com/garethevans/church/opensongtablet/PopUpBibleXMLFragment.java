@@ -6,6 +6,7 @@ import android.app.DialogFragment;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.support.v7.widget.SwitchCompat;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -19,7 +20,6 @@ import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import java.io.File;
 import java.util.ArrayList;
 
 public class PopUpBibleXMLFragment extends DialogFragment {
@@ -66,11 +66,17 @@ public class PopUpBibleXMLFragment extends DialogFragment {
     ProgressBar progressBar;
     TextView previewTextView;
     String bible;
+    DocumentFile bibleDocumentFile;
     public static boolean includeVersNums = false;
+
+    StorageAccess storageAccess;
+    DocumentFile homeFolder;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        storageAccess = new StorageAccess();
+        homeFolder = storageAccess.getHomeFolder(getActivity());
         getDialog().requestWindowFeature(Window.FEATURE_NO_TITLE);
         getDialog().setCanceledOnTouchOutside(true);
 
@@ -118,8 +124,11 @@ public class PopUpBibleXMLFragment extends DialogFragment {
                 // Try to update the preview
                 if (quickUpdate!=null) {
                     try {
-                        Bible.getVersesForChapter(new File(quickUpdate.get(0)), quickUpdate.get(1), quickUpdate.get(2));
-                        getBibleText(new File(quickUpdate.get(0)), quickUpdate.get(1), quickUpdate.get(2),
+                        bibleDocumentFile = storageAccess.getFileLocationAsDocumentFile(getActivity(),
+                                homeFolder,"OpenSong Scripture",
+                                "", quickUpdate.get(0));
+                        Bible.getVersesForChapter(bibleDocumentFile, quickUpdate.get(1), quickUpdate.get(2));
+                        getBibleText(bibleDocumentFile, quickUpdate.get(1), quickUpdate.get(2),
                                 quickUpdate.get(3), quickUpdate.get(4));
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -167,8 +176,10 @@ public class PopUpBibleXMLFragment extends DialogFragment {
         protected String doInBackground(Object... objects) {
             bibleFileNames = new ArrayList<>();
             bibleFileNames.add("");
-            File[] files = FullscreenActivity.dirbibles.listFiles();
-            for (File f : files) {
+            DocumentFile dirbibles = storageAccess.getFileLocationAsDocumentFile(getActivity(), homeFolder,
+                    "OpenSong Scripture", "","");
+            DocumentFile[] files = dirbibles.listFiles();
+            for (DocumentFile f : files) {
                 if (f.isFile()) {
                     bibleFileNames.add(f.getName());
                 }
@@ -190,12 +201,12 @@ public class PopUpBibleXMLFragment extends DialogFragment {
                     if (bibleFileNames.size()>=i) {
                         FullscreenActivity.bibleFile = bibleFileNames.get(i);
                         Preferences.savePreferences();
-                        File bibleFileChosen = new File(FullscreenActivity.dirbibles,bibleFileNames.get(i));
+                        DocumentFile bibleFileChosen = storageAccess.getFileLocationAsDocumentFile(getActivity(),
+                                homeFolder,"OpenSong Scripture", "", bibleFileNames.get(i));
                         if (bibleFileChosen!=null && bibleFileChosen.exists() && bibleFileChosen.isFile()) {
                             updateBibleBooks(bibleFileChosen);
                         }
-                        /*File bibleFileChosen = new File(FullscreenActivity.dirbibles, bibleFileNames.get(i));
-                        updateBibleBooks(bibleFileChosen);*/
+
                     }
                 }
 
@@ -215,7 +226,7 @@ public class PopUpBibleXMLFragment extends DialogFragment {
         }
     }
 
-    public void updateBibleBooks(File bibleFileChosen) {
+    public void updateBibleBooks(DocumentFile bibleFileChosen) {
         try {
             quickUpdate = null;
             UpdateBibleBooks update_biblebooks = new UpdateBibleBooks(bibleFileChosen);
@@ -227,8 +238,8 @@ public class PopUpBibleXMLFragment extends DialogFragment {
     @SuppressLint("StaticFieldLeak")
     private class UpdateBibleBooks extends AsyncTask<Object,Void,String> {
 
-        File bibleFileChosen;
-        UpdateBibleBooks(File f) {
+        DocumentFile bibleFileChosen;
+        UpdateBibleBooks(DocumentFile f) {
             bibleFileChosen = f;
         }
 
@@ -274,7 +285,7 @@ public class PopUpBibleXMLFragment extends DialogFragment {
         }
     }
 
-    public void updateBibleChapters(File bibleFileChosen, String bibleBookName) {
+    public void updateBibleChapters(DocumentFile bibleFileChosen, String bibleBookName) {
         try {
             quickUpdate = null;
             UpdateBibleChapters update_biblechapters = new UpdateBibleChapters(bibleFileChosen, bibleBookName);
@@ -285,10 +296,10 @@ public class PopUpBibleXMLFragment extends DialogFragment {
     }
     @SuppressLint("StaticFieldLeak")
     private class UpdateBibleChapters extends AsyncTask<Object, Void, String> {
-        File bibleFileChosen;
+        DocumentFile bibleFileChosen;
         String bibleBookName;
 
-        UpdateBibleChapters (File f, String s){
+        UpdateBibleChapters (DocumentFile f, String s){
             bibleFileChosen = f;
             bibleBookName = s;
         }
@@ -330,7 +341,7 @@ public class PopUpBibleXMLFragment extends DialogFragment {
         }
     }
 
-    public void updateBibleVerses(File bibleFileChosen, String bibleBookName, String bibleChapter) {
+    public void updateBibleVerses(DocumentFile bibleFileChosen, String bibleBookName, String bibleChapter) {
         try {
             quickUpdate = null;
             UpdateBibleVerses update_bibleverses = new UpdateBibleVerses(bibleFileChosen, bibleBookName, bibleChapter);
@@ -342,10 +353,10 @@ public class PopUpBibleXMLFragment extends DialogFragment {
     @SuppressLint("StaticFieldLeak")
     private class UpdateBibleVerses extends AsyncTask<Object,Void,String> {
 
-        File bibleFileChosen;
+        DocumentFile bibleFileChosen;
         String bibleBookName;
         String bibleChapter;
-        UpdateBibleVerses(File f, String s1, String s2) {
+        UpdateBibleVerses(DocumentFile f, String s1, String s2) {
             bibleFileChosen = f;
             bibleBookName = s1;
             bibleChapter = s2;
@@ -418,7 +429,7 @@ public class PopUpBibleXMLFragment extends DialogFragment {
         }
     }
 
-    public void getBibleText(File bibleFileChosen, String bibleBookName, String bibleChapter, String bibleVerseFrom, String bibleVerseTo) {
+    public void getBibleText(DocumentFile bibleFileChosen, String bibleBookName, String bibleChapter, String bibleVerseFrom, String bibleVerseTo) {
         quickUpdate = new ArrayList<>();
         quickUpdate.add(bibleFileChosen.toString());
         quickUpdate.add(bibleBookName);
@@ -437,20 +448,20 @@ public class PopUpBibleXMLFragment extends DialogFragment {
         } catch (Exception e) {
             to = 0;
         }
-        String s = "";
+        StringBuilder s = new StringBuilder();
         if (to>0 && from>0 && to>=from) {
 
             for (int i=from; i<=to; i++) {
                 if (bibleText.size()>=i) {
-                    s = s + bibleText.get(i-1) + " ";
+                    s.append(bibleText.get(i - 1)).append(" ");
                 }
             }
             // Trim and fix new sentence double spaces
-            s = s.trim();
-            s = s.replace(".  ",". ");
-            s = s.replace(". ", ".  ");
+            s = new StringBuilder(s.toString().trim());
+            s = new StringBuilder(s.toString().replace(".  ", ". "));
+            s = new StringBuilder(s.toString().replace(". ", ".  "));
         }
-        previewTextView.setText(s);
+        previewTextView.setText(s.toString());
 
         // Work out the Scripture title to use
         if (Bible.bibleFormat.equals("Zefania")) {
@@ -468,7 +479,7 @@ public class PopUpBibleXMLFragment extends DialogFragment {
             verses = from + "-" + to;
         }
         FullscreenActivity.scripture_title = bibleBookName + " " + bibleChapter + ":" + verses + " (" + bible + ")";
-        FullscreenActivity.scripture_verse = Bible.shortenTheLines(s,40,6);
+        FullscreenActivity.scripture_verse = Bible.shortenTheLines(s.toString(),40,6);
     }
 
     public void doSave() {

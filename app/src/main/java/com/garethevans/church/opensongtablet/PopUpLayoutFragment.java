@@ -5,9 +5,9 @@ import android.app.DialogFragment;
 import android.content.DialogInterface;
 import android.content.res.ColorStateList;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.support.v7.widget.SwitchCompat;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -23,8 +23,6 @@ import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
-
-import java.io.File;
 
 public class PopUpLayoutFragment extends DialogFragment {
 
@@ -57,44 +55,23 @@ public class PopUpLayoutFragment extends DialogFragment {
     boolean firsttime = true;
     String newtext = "";
 
-    SwitchCompat toggleChordsButton;
-    SwitchCompat toggleAutoScaleButton;
-    LinearLayout group_maxfontsize;
-    SeekBar setMaxFontSizeProgressBar;
-    TextView maxfontSizePreview;
-    LinearLayout group_manualfontsize;
-    SeekBar setFontSizeProgressBar;
-    TextView fontSizePreview;
-    LinearLayout group_alignment;
-    TextView lyrics_title_align;
-    FloatingActionButton lyrics_left_align;
-    FloatingActionButton lyrics_center_align;
-    FloatingActionButton lyrics_right_align;
-    FloatingActionButton info_left_align;
-    FloatingActionButton info_center_align;
-    FloatingActionButton info_right_align;
-    LinearLayout group_songinfofontsizes;
-    SeekBar presoTitleSizeSeekBar;
-    SeekBar presoAuthorSizeSeekBar;
-    SeekBar presoCopyrightSizeSeekBar;
-    SeekBar presoAlertSizeSeekBar;
-    SeekBar presoTransitionTimeSeekBar;
-    TextView presoTransitionTimeTextView;
-    LinearLayout group_backgrounds;
-    SeekBar presoAlphaProgressBar;
-    TextView presoAlphaText;
-    ImageView chooseLogoButton;
-    ImageView chooseImage1Button;
-    ImageView chooseImage2Button;
-    ImageView chooseVideo1Button;
-    ImageView chooseVideo2Button;
-    CheckBox image1CheckBox;
-    CheckBox image2CheckBox;
-    CheckBox video1CheckBox;
-    CheckBox video2CheckBox;
-    LinearLayout group_margins;
-    SeekBar setXMarginProgressBar;
-    SeekBar setYMarginProgressBar;
+    SwitchCompat toggleChordsButton,toggleAutoScaleButton;
+    TextView maxfontSizePreview,fontSizePreview,lyrics_title_align,presoTransitionTimeTextView,
+            presoAlphaText;
+    FloatingActionButton lyrics_left_align,lyrics_center_align,lyrics_right_align,info_left_align,
+            info_center_align,info_right_align;
+    LinearLayout group_maxfontsize,group_margins,group_alignment,group_songinfofontsizes,
+            group_backgrounds,group_manualfontsize;
+    SeekBar presoTitleSizeSeekBar,presoAuthorSizeSeekBar,presoCopyrightSizeSeekBar,
+            presoAlertSizeSeekBar,presoTransitionTimeSeekBar,setMaxFontSizeProgressBar,
+            setFontSizeProgressBar,presoAlphaProgressBar,setXMarginProgressBar,
+            setYMarginProgressBar;
+    ImageView chooseLogoButton,chooseImage1Button,chooseImage2Button,chooseVideo1Button,
+            chooseVideo2Button;
+    CheckBox image1CheckBox,image2CheckBox,video1CheckBox,video2CheckBox;
+
+    StorageAccess storageAccess;
+    DocumentFile homeFolder;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -118,6 +95,9 @@ public class PopUpLayoutFragment extends DialogFragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         getDialog().requestWindowFeature(Window.FEATURE_NO_TITLE);
         getDialog().setCanceledOnTouchOutside(true);
+
+        storageAccess = new StorageAccess();
+        homeFolder = storageAccess.getHomeFolder(getActivity());
 
         final View V = inflater.inflate(R.layout.popup_layout, container, false);
 
@@ -174,16 +154,13 @@ public class PopUpLayoutFragment extends DialogFragment {
         setXMarginProgressBar = V.findViewById(R.id.setXMarginProgressBar);
         setYMarginProgressBar = V.findViewById(R.id.setYMarginProgressBar);
 
-        SetTypeFace.setTypeface();
+        SetTypeFace setTypeFace = new SetTypeFace();
+        setTypeFace.setTypeface(getActivity(), homeFolder);
 
 
         // Set the stuff up to what it should be from preferences
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            toggleChordsButton.setChecked(FullscreenActivity.presoShowChords);
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            toggleAutoScaleButton.setChecked(FullscreenActivity.presoAutoScale);
-        }
+        toggleChordsButton.setChecked(FullscreenActivity.presoShowChords);
+        toggleAutoScaleButton.setChecked(FullscreenActivity.presoAutoScale);
         setMaxFontSizeProgressBar.setMax(70);
         setMaxFontSizeProgressBar.setProgress(FullscreenActivity.presoMaxFontSize - 4);
         maxfontSizePreview.setTypeface(FullscreenActivity.presofont);
@@ -253,7 +230,7 @@ public class PopUpLayoutFragment extends DialogFragment {
             @Override
             public void onClick(View view) {
                 CustomAnimations.animateFAB(lyrics_left_align, getActivity());
-                FullscreenActivity.presoLyricsAlign = Gravity.LEFT;
+                FullscreenActivity.presoLyricsAlign = Gravity.START;
                 Preferences.savePreferences();
                 setUpAlignmentButtons();
                 sendUpdateToScreen("all");
@@ -273,7 +250,7 @@ public class PopUpLayoutFragment extends DialogFragment {
             @Override
             public void onClick(View view) {
                 CustomAnimations.animateFAB(lyrics_right_align, getActivity());
-                FullscreenActivity.presoLyricsAlign = Gravity.RIGHT;
+                FullscreenActivity.presoLyricsAlign = Gravity.END;
                 Preferences.savePreferences();
                 setUpAlignmentButtons();
                 sendUpdateToScreen("all");
@@ -283,7 +260,7 @@ public class PopUpLayoutFragment extends DialogFragment {
             @Override
             public void onClick(View view) {
                 CustomAnimations.animateFAB(info_left_align, getActivity());
-                FullscreenActivity.presoInfoAlign = Gravity.LEFT;
+                FullscreenActivity.presoInfoAlign = Gravity.START;
                 Preferences.savePreferences();
                 setUpAlignmentButtons();
                 sendUpdateToScreen("info");
@@ -303,7 +280,7 @@ public class PopUpLayoutFragment extends DialogFragment {
             @Override
             public void onClick(View view) {
                 CustomAnimations.animateFAB(info_right_align, getActivity());
-                FullscreenActivity.presoInfoAlign = Gravity.RIGHT;
+                FullscreenActivity.presoInfoAlign = Gravity.END;
                 Preferences.savePreferences();
                 setUpAlignmentButtons();
                 sendUpdateToScreen("info");
@@ -452,7 +429,7 @@ public class PopUpLayoutFragment extends DialogFragment {
     }
 
     public void setUpAlignmentButtons() {
-        if (FullscreenActivity.presoLyricsAlign == Gravity.LEFT) {
+        if (FullscreenActivity.presoLyricsAlign == Gravity.START) {
             lyrics_left_align.setBackgroundTintList(ColorStateList.valueOf(0xffff0000));
             lyrics_center_align.setBackgroundTintList(ColorStateList.valueOf(0xff555555));
             lyrics_right_align.setBackgroundTintList(ColorStateList.valueOf(0xff555555));
@@ -466,11 +443,11 @@ public class PopUpLayoutFragment extends DialogFragment {
             lyrics_center_align.setBackgroundTintList(ColorStateList.valueOf(0xff555555));
             lyrics_right_align.setBackgroundTintList(ColorStateList.valueOf(0xffff0000));
         }
-        if (FullscreenActivity.presoInfoAlign == Gravity.LEFT) {
+        if (FullscreenActivity.presoInfoAlign == Gravity.START) {
             info_left_align.setBackgroundTintList(ColorStateList.valueOf(0xffff0000));
             info_center_align.setBackgroundTintList(ColorStateList.valueOf(0xff555555));
             info_right_align.setBackgroundTintList(ColorStateList.valueOf(0xff555555));
-        } else if (FullscreenActivity.presoInfoAlign == Gravity.RIGHT) {
+        } else if (FullscreenActivity.presoInfoAlign == Gravity.END) {
             info_left_align.setBackgroundTintList(ColorStateList.valueOf(0xff555555));
             info_center_align.setBackgroundTintList(ColorStateList.valueOf(0xff555555));
             info_right_align.setBackgroundTintList(ColorStateList.valueOf(0xffff0000));
@@ -564,9 +541,11 @@ public class PopUpLayoutFragment extends DialogFragment {
     }
 
     public void setButtonBackground(ImageView v, String background) {
-        File imgfile = new File(FullscreenActivity.dirbackgrounds + "/"+ background);
+        StorageAccess sa = new StorageAccess();
+        DocumentFile imgfile = sa.getFileLocationAsDocumentFile(getActivity(), homeFolder,
+                "Backgrounds", "", background);
         if (imgfile.exists() && imgfile.isFile()) {
-            Uri imageUri = Uri.fromFile(imgfile);
+            Uri imageUri = imgfile.getUri();
             v.setBackgroundColor(0x00000000);
             RequestOptions myOptions = new RequestOptions()
                     .override(120,90);

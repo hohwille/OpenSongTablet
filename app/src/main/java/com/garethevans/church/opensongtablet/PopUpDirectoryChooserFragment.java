@@ -1,3 +1,5 @@
+
+
 package com.garethevans.church.opensongtablet;
 
 import android.Manifest;
@@ -8,7 +10,6 @@ import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.provider.DocumentFile;
@@ -23,7 +24,6 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import java.io.File;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -71,10 +71,8 @@ public class PopUpDirectoryChooserFragment extends DialogFragment {
     ImageView navigateUp;
     public TextView currentFolder;
     ListView directoryList;
-    public static File location = Environment.getExternalStorageDirectory();
-    public static Uri uri_root = FullscreenActivity.uriTree;
-    public static Uri uri_current = FullscreenActivity.uriTree;
-    public static String[] splitlocation;
+    public static DocumentFile location;
+    public static List<String> splitlocation;
     public static List<String> tempProperDirectories;
     public static List<String> tempProperDirectoriesAndFiles;
     public static List<String> tempProperFolders;
@@ -86,6 +84,8 @@ public class PopUpDirectoryChooserFragment extends DialogFragment {
     TextView isWritableText;
     TextView extraText;
     boolean isinsideopensongfolder = false;
+    StorageAccess storageAccess;
+    DocumentFile homeFolder;
 
     public void onStart() {
         super.onStart();
@@ -108,7 +108,8 @@ public class PopUpDirectoryChooserFragment extends DialogFragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-
+        storageAccess = new StorageAccess();
+        homeFolder = storageAccess.getHomeFolder(getActivity());
         getDialog().setTitle(getActivity().getResources().getString(R.string.storage_choose));
         getDialog().requestWindowFeature(Window.FEATURE_NO_TITLE);
         getDialog().setCanceledOnTouchOutside(true);
@@ -149,10 +150,8 @@ public class PopUpDirectoryChooserFragment extends DialogFragment {
 
         FullscreenActivity.filechosen = null;
 
-        // Set the emulated storage as the default location if it is empty or not valid
-        if (!location.isDirectory() || !location.canWrite()) {
-            location = FullscreenActivity.homedir;
-        }
+        location = storageAccess.getFileLocationAsDocumentFile(getActivity(),homeFolder,"","","");
+
         currentFolder = V.findViewById(R.id.currentFolderText);
         currentFolder.setText(location.toString());
         isWritableText = V.findViewById(R.id.isWritableText);
@@ -199,7 +198,7 @@ public class PopUpDirectoryChooserFragment extends DialogFragment {
                 String itemclicked;
 
                 if (chooserAction.contains("file")) {
-                    if (tempProperDirectoriesAndFiles.size()>position) {
+                    if (tempProperDirectoriesAndFiles.size() > position) {
                         itemclicked = tempProperDirectoriesAndFiles.get(position);
                     } else {
                         if (chooserAction.equals("file")) {
@@ -207,68 +206,52 @@ public class PopUpDirectoryChooserFragment extends DialogFragment {
                         } else {
                             listFoldersAndFilesOSB();
                         }
-                        itemclicked="";
+                        itemclicked = "";
                     }
                 } else {
-                    if (tempProperDirectories.size()>position) {
+                    if (tempProperDirectories.size() > position) {
                         itemclicked = tempProperDirectories.get(position);
                     } else {
                         listFolders();
-                        itemclicked="";
+                        itemclicked = "";
                     }
                 }
-                itemclicked = itemclicked.replace("/","");
+                itemclicked = itemclicked.replace("/", "");
                 // Check if link clicked is a folder or a file.
 
-                if (FullscreenActivity.searchUsingSAF) {
-                    // Try to get the new location using Storage Access Framework
-                    if (uri_current.toString().endsWith("%3A")) {
-                        // This is the root, so just add the directory name
-                        itemclicked = uri_current + itemclicked;
+                //Use the standard file browsing features
+                Uri newloc = Uri.withAppendedPath(location.getUri(), itemclicked);
+                location = DocumentFile.fromSingleUri(getActivity(), newloc);
+                if (location.isDirectory()) {
+                    // List the new folder contents
+                    if (chooserAction.contains("file")) {
+                        if (chooserAction.equals(("file"))) {
+                            listFoldersAndFiles();
+                        } else {
+                            listFoldersAndFilesOSB();
+                        }
                     } else {
-                        // Add the encoded file separator
-                        itemclicked = uri_current + "%2F" + itemclicked;
-                    }
-                    uri_current = Uri.parse(itemclicked);
-                    DocumentFile pickedDir  = DocumentFile.fromSingleUri(getActivity(), uri_current);
-                    if (pickedDir.isDirectory()) {
                         listFolders();
                     }
-
                 } else {
-                    //Use the standard file browsing features
-                    location = new File(location + "/" + itemclicked);
-                    if (location.isDirectory()) {
-                        // List the new folder contents
-                        if (chooserAction.contains("file")) {
-                            if (chooserAction.equals(("file"))) {
-                                listFoldersAndFiles();
-                            } else {
-                                listFoldersAndFilesOSB();
-                            }
-                        } else {
-                            listFolders();
-                        }
-                    } else {
-                        // This is the file we want (folder chooser won't list files!)
-                        FullscreenActivity.filechosen = location;
-                        if (chooserAction.equals("file")) {
-                            mListener.updateCustomStorage();
-                        } else if (chooserAction.equals("findosbfiles")) {
-                            FullscreenActivity.whattodo = "processimportosb";
-                            mListener.openFragment();
-                        }
-                        if (FullscreenActivity.filetoselect.equals("audiolink") || FullscreenActivity.filetoselect.equals("otherlink")) {
-                            //mListener.updateLinksPopUp();
-                            FullscreenActivity.whattodo = "page_links";
-                            mListener.openFragment();
+                    // This is the file we want (folder chooser won't list files!)
+                    FullscreenActivity.filechosen = location;
+                    if (chooserAction.equals("file")) {
+                        mListener.updateCustomStorage();
+                    } else if (chooserAction.equals("findosbfiles")) {
+                        FullscreenActivity.whattodo = "processimportosb";
+                        mListener.openFragment();
+                    }
+                    if (FullscreenActivity.filetoselect.equals("audiolink") || FullscreenActivity.filetoselect.equals("otherlink")) {
+                        //mListener.updateLinksPopUp();
+                        FullscreenActivity.whattodo = "page_links";
+                        mListener.openFragment();
 
-                        }
-                        try {
-                            dismiss();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
+                    }
+                    try {
+                        dismiss();
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
                 }
             }
@@ -307,100 +290,52 @@ public class PopUpDirectoryChooserFragment extends DialogFragment {
         } else {
             Log.d("d","PERMISSION ALLOWED");
         }
-        FullscreenActivity.searchUsingSAF = false;  // Can't get this working yet!
-        if (FullscreenActivity.searchUsingSAF) {
-            try {
-                DocumentFile df = DocumentFile.fromTreeUri(getActivity(), uri_current);
-                if (df.canWrite()) {
-                    if (selectButton != null) {
-                        selectButton.setVisibility(View.VISIBLE);
-                        selectButton.setEnabled(true);
-                    }
-                    isWritableText.setVisibility(View.INVISIBLE);
-                } else {
-                    if (selectButton != null) {
-                        selectButton.setVisibility(View.GONE);
-                        selectButton.setEnabled(false);
-                    }
-                    isWritableText.setVisibility(View.VISIBLE);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+        if (location.canWrite()) {
+            if (selectButton != null) {
+                selectButton.setVisibility(View.VISIBLE);
+                selectButton.setEnabled(true);
             }
+            isWritableText.setVisibility(View.INVISIBLE);
         } else {
-            if (location.canWrite()) {
-                if (selectButton != null) {
-                    selectButton.setVisibility(View.VISIBLE);
-                    selectButton.setEnabled(true);
-                }
-                isWritableText.setVisibility(View.INVISIBLE);
-            } else {
-                if (selectButton != null) {
-                    selectButton.setVisibility(View.GONE);
-                    selectButton.setEnabled(false);
-                }
-                isWritableText.setVisibility(View.VISIBLE);
+            if (selectButton != null) {
+                selectButton.setVisibility(View.GONE);
+                selectButton.setEnabled(false);
             }
+            isWritableText.setVisibility(View.VISIBLE);
         }
     }
 
     public void doNavigateUp() {
         // If we can, remove the last part of the folder name
-
-
-        if (FullscreenActivity.searchUsingSAF) {
-            // Use the storage access framework method
-            try {
-                String shortened = uri_current.getPath().replace(uri_root.getPath(), "");
-                // Leaves us with a string like   'folder1/folder2/folder3
-                String[] bits = shortened.split("/");
-                if (bits.length > 0) {
-                    String newlocation = "";
-                    for (int x = 0; x < bits.length - 1; x++) { // Lose the last folder
-                        newlocation = "%2F" + newlocation;
-                    }
-                    // Remove the first %2F
-                    newlocation = newlocation.replaceFirst("%2F", "");
-                    newlocation = uri_root + newlocation;
-                    uri_current = Uri.parse(newlocation);
-                } else {
-                    uri_current = uri_root;
-                }
-                listFolders();
-            } catch (Exception e) {
-                e.printStackTrace();
+        // Use the standard file browsing method
+        if (splitlocation != null && splitlocation.size() > 1) {
+            StringBuilder sb = new StringBuilder();
+            for (String s:splitlocation) {
+                sb.append(s);
+                sb.append(s);
             }
-
-
-        } else {
-            // Use the standard file browsing method
-            if (splitlocation != null && splitlocation.length > 1) {
-                String newlocation = location.toString().replace("/" + splitlocation[splitlocation.length - 1], "");
-                if (!newlocation.contains("/")) {
-                    newlocation = "/" + newlocation;
-                }
-                try {
-                    location = new File(newlocation);
-                    if (chooserAction.contains("file")) {
-                        if (chooserAction.equals("file")) {
-                            listFoldersAndFiles();
-                        } else {
-                            listFoldersAndFilesOSB();
-                        }
+            Uri newuri = Uri.parse(sb.toString());
+            location = DocumentFile.fromSingleUri(getActivity(),newuri);
+            try {
+                if (chooserAction.contains("file")) {
+                    if (chooserAction.equals("file")) {
+                        listFoldersAndFiles();
                     } else {
-                        listFolders();
+                        listFoldersAndFilesOSB();
                     }
-                } catch (Exception e) {
-                    FullscreenActivity.myToastMessage = getResources().getString(R.string.error);
-                    ShowToast.showToast(getActivity());
+                } else {
+                    listFolders();
                 }
+            } catch (Exception e) {
+                FullscreenActivity.myToastMessage = getResources().getString(R.string.error);
+                ShowToast.showToast(getActivity());
             }
         }
     }
 
     public void listFoldersAndFiles() {
-        splitlocation = location.toString().split("/");
-        File[] tempmyitems = location.listFiles();
+        splitlocation = location.getUri().getPathSegments();
+        DocumentFile[] tempmyitems = location.listFiles();
 
         //Now set the size of the temp arrays
         tempProperFolders = new ArrayList<>();
@@ -409,7 +344,7 @@ public class PopUpDirectoryChooserFragment extends DialogFragment {
 
         //Now read the stuff into the temp array
         if (tempmyitems!=null) {
-            for (File tempmyitem : tempmyitems) {
+            for (DocumentFile tempmyitem : tempmyitems) {
                 if (tempmyitem != null) {
                     if (tempmyitem.isDirectory()) {
                         tempProperFolders.add(tempmyitem.getName() + "/");
@@ -444,8 +379,8 @@ public class PopUpDirectoryChooserFragment extends DialogFragment {
     }
 
     public void listFoldersAndFilesOSB() {
-        splitlocation = location.toString().split("/");
-        File[] tempmyitems = location.listFiles();
+        splitlocation = location.getUri().getPathSegments();
+        DocumentFile[] tempmyitems = location.listFiles();
 
         //Now set the size of the temp arrays
         tempProperFolders = new ArrayList<>();
@@ -454,7 +389,7 @@ public class PopUpDirectoryChooserFragment extends DialogFragment {
 
         //Now read the stuff into the temp array
         if (tempmyitems!=null) {
-            for (File tempmyitem : tempmyitems) {
+            for (DocumentFile tempmyitem : tempmyitems) {
                 if (tempmyitem != null) {
                     if (tempmyitem.isDirectory()) {
                         tempProperFolders.add(tempmyitem.getName() + "/");
@@ -499,72 +434,38 @@ public class PopUpDirectoryChooserFragment extends DialogFragment {
         boolean foundSetsFolder = false;
         boolean foundOpenSongFolder = false;
 
-        if (FullscreenActivity.searchUsingSAF) {
-            // This is to allow users to access the SD card if Android says no using Storage Access Framework API!
-            if (uri_current!=null) {
-                try {
-                    DocumentFile pickedDir = DocumentFile.fromTreeUri(getActivity(), uri_current);
-                    // List all existing folders inside picked directory
-                    for (DocumentFile file : pickedDir.listFiles()) {
-                        if (file.isDirectory()) {
-                            if (pickedDir.toString().endsWith("OpenSong")) {
-                                if (file.getName().equals("Sets")) {
-                                    foundSetsFolder = true;
-                                } else if (file.getName().equals("Songs")) {
-                                    foundSongsFolder = true;
-                                }
-                            } else if (file.getName().equals("OpenSong")) {
-                                foundOpenSongFolder = true;
-                            }
-                            tempProperDirectories.add(file.getName());
-                        }
-                    }
-                    String whereami = uri_current.toString().replace(uri_root.toString(), "/");
-                    if (whereami.equals("")) {
-                        whereami = "/";
-                    }
-                    currentFolder.setText(whereami);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-
-
-
+        // This searches the SD card as a standard file location
+        splitlocation = location.getUri().getPathSegments();
+        DocumentFile[] tempmyitems = location.listFiles();
+        int tempnumitems;
+        if (tempmyitems != null && tempmyitems.length > 0) {
+            tempnumitems = tempmyitems.length;
         } else {
-            // This searches the SD card as a standard file location
-            splitlocation = location.toString().split("/");
-            File[] tempmyitems = location.listFiles();
-            int tempnumitems;
-            if (tempmyitems != null && tempmyitems.length > 0) {
-                tempnumitems = tempmyitems.length;
-            } else {
-                tempnumitems = 0;
-            }
-            int numactualdirs = 0;
-            for (int x = 0; x < tempnumitems; x++) {
-                if (tempmyitems[x] != null && tempmyitems[x].isDirectory()) {
-                    numactualdirs++;
-                }
-            }
-            //Now read the stuff into the temp array
-            for (int x=0; x<numactualdirs; x++) {
-                if (tempmyitems[x] != null && tempmyitems[x].isDirectory()) {
-                    if (location.toString().endsWith("OpenSong")) {
-                        if (tempmyitems[x].getName().equals("Sets")) {
-                            foundSetsFolder = true;
-                        } else if (tempmyitems[x].getName().equals("Songs")) {
-                            foundSongsFolder = true;
-                        }
-                    } else if (tempmyitems[x].getName().equals("OpenSong")) {
-                        foundOpenSongFolder = true;
-                    }
-                    tempProperDirectories.add(tempmyitems[x].getName());
-                }
-            }
-
-            currentFolder.setText(location.toString());
+            tempnumitems = 0;
         }
+        int numactualdirs = 0;
+        for (int x = 0; x < tempnumitems; x++) {
+            if (tempmyitems[x] != null && tempmyitems[x].isDirectory()) {
+                numactualdirs++;
+            }
+        }
+        //Now read the stuff into the temp array
+        for (int x = 0; x < numactualdirs; x++) {
+            if (tempmyitems[x] != null && tempmyitems[x].isDirectory()) {
+                if (location.toString().endsWith("OpenSong")) {
+                    if (tempmyitems[x].getName().equals("Sets")) {
+                        foundSetsFolder = true;
+                    } else if (tempmyitems[x].getName().equals("Songs")) {
+                        foundSongsFolder = true;
+                    }
+                } else if (tempmyitems[x].getName().equals("OpenSong")) {
+                    foundOpenSongFolder = true;
+                }
+                tempProperDirectories.add(tempmyitems[x].getName());
+            }
+        }
+
+        currentFolder.setText(location.toString());
 
         extraText.setVisibility(View.GONE);
         isinsideopensongfolder = foundSetsFolder && foundSongsFolder;

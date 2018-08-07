@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.drawable.Drawable;
+import android.support.v4.provider.DocumentFile;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -29,13 +30,14 @@ class SongMenuAdapter extends BaseAdapter implements SectionIndexer {
 
     private MyInterface mListener;
     @SuppressLint("UseSparseArrays")
-    private HashMap<Integer,Integer> sectionPositions = new HashMap<>();
+    private HashMap<Integer,Integer> sectionPositions;
     @SuppressLint("UseSparseArrays")
-    private HashMap<Integer,Integer> positionsForSection = new HashMap<>();
+    private HashMap<Integer,Integer> positionsForSection;
     String[] sections;
     Context context;
     String[] songs;
     private ArrayList<SongMenuViewItems> songList;
+    DocumentFile homeFolder;
 
     @SuppressLint("UseSparseArrays")
     SongMenuAdapter(Context context, ArrayList<SongMenuViewItems> songList) {
@@ -101,13 +103,15 @@ class SongMenuAdapter extends BaseAdapter implements SectionIndexer {
 
     @SuppressLint({"ViewHolder", "InflateParams"})
     @Override
-    public View getView(final int position , View convertView , ViewGroup parent ) {
+    public View getView(final int position , View convertView , ViewGroup parent) {
 
         try {
             LayoutInflater mInflater = (LayoutInflater) context
                     .getSystemService(Activity.LAYOUT_INFLATER_SERVICE);
 
-            convertView = mInflater.inflate(R.layout.list_item, null);
+            if (mInflater != null) {
+                convertView = mInflater.inflate(R.layout.list_item, null);
+            }
             TextView lblListItem = convertView.findViewById(R.id.lblListItem);
             TextView lblListItemAuthor = convertView.findViewById(R.id.lblListItemAuthor);
             final CheckBox lblListCheck = convertView.findViewById(R.id.lblListCheck);
@@ -143,7 +147,7 @@ class SongMenuAdapter extends BaseAdapter implements SectionIndexer {
                 lblListItem.setCompoundDrawablesWithIntrinsicBounds(d,null,null,null);
             }
 
-            if (key != null && !key.equals("") && !key.equals(" ")) {
+            if (!key.equals("") && !key.equals(" ")) {
                 key = " (" + key + ")";
             } else {
                 key = "";
@@ -201,16 +205,22 @@ class SongMenuAdapter extends BaseAdapter implements SectionIndexer {
                                 if (FullscreenActivity.ccli_automatic) {
                                     // Now we need to get the song info quickly to log it correctly
                                     // as this might not be the song loaded
-                                    String[] vals = LoadXML.getCCLILogInfo(c, FullscreenActivity.whichSongFolder, songtoadd);
+                                    LoadXML loadXML = new LoadXML();
+                                    StorageAccess storageAccess = new StorageAccess();
+                                    DocumentFile homeFolder = storageAccess.getHomeFolder(c);
+                                    String[] vals = loadXML.getCCLILogInfo(c, homeFolder,
+                                            FullscreenActivity.whichSongFolder, songtoadd);
                                     if (vals.length==4 && vals[0]!=null && vals[1]!=null && vals[2]!=null && vals[3]!=null) {
-                                        PopUpCCLIFragment.addUsageEntryToLog(FullscreenActivity.whichSongFolder + "/" + songtoadd,
+                                        PopUpCCLIFragment popUpCCLIFragment = new PopUpCCLIFragment();
+                                        popUpCCLIFragment.addUsageEntryToLog(c,FullscreenActivity.whichSongFolder + "/" + songtoadd,
                                                 vals[0], vals[1], vals[2], vals[3], "6"); // Printed
                                     }
                                 }
 
                                 // Allow the song to be added, even if it is already there
                                 FullscreenActivity.mySet = FullscreenActivity.mySet + FullscreenActivity.whatsongforsetwork;
-                                SetActions.prepareSetList();
+                                SetActions setActions = new SetActions();
+                                setActions.prepareSetList();
 
                                 // Tell the user that the song has been added.
                                 FullscreenActivity.myToastMessage = "\"" + songtoadd + "\" " + c.getResources().getString(R.string.addedtoset);
@@ -228,7 +238,8 @@ class SongMenuAdapter extends BaseAdapter implements SectionIndexer {
                             }
 
                             FullscreenActivity.mySet = FullscreenActivity.mySet.replace(FullscreenActivity.whatsongforsetwork, "");
-                            SetActions.prepareSetList();
+                            SetActions setActions = new SetActions();
+                            setActions.prepareSetList();
 
                             // Tell the user that the song has been removed.
                             FullscreenActivity.myToastMessage = "\"" + songtoadd + "\" " + c.getResources().getString(R.string.removedfromset);

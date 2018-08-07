@@ -3,6 +3,7 @@ package com.garethevans.church.opensongtablet;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.AsyncTask;
+import android.support.v4.provider.DocumentFile;
 import android.text.Html;
 import android.util.Log;
 
@@ -12,7 +13,6 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.NodeList;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -70,14 +70,14 @@ class Bible {
         }
     }
 
-    private static void decideOnBibleFormat(File bibleFile) {
+    private static void decideOnBibleFormat(DocumentFile bibleFile) {
         Log.d("d","decideOnBibleFormat() called");
 
         try {
             if (bibleFile.exists() && bibleFile.isFile()) {
                 DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
                 DocumentBuilder db = dbf.newDocumentBuilder();
-                dom = db.parse(bibleFile);
+                dom = db.parse(bibleFile.getUri().toString());
                 docEle = dom.getDocumentElement();
                 XPathFactory xPathfactory = XPathFactory.newInstance();
                 xpath = xPathfactory.newXPath();
@@ -96,7 +96,7 @@ class Bible {
         }
     }
 
-    static String getZefaniaBibleName(File bibleFile) {
+    static String getZefaniaBibleName(DocumentFile bibleFile) {
         Log.d("d","getZefaniaBibleName() called");
 
         String b = "";
@@ -114,7 +114,7 @@ class Bible {
         return b;
     }
 
-    static ArrayList<String> getBibleBookNames(Context c, File bibleFile) {
+    static ArrayList<String> getBibleBookNames(Context c, DocumentFile bibleFile) {
         Log.d("d","getBibleBookNames() called");
         // Get the bible format
         decideOnBibleFormat(bibleFile);
@@ -147,7 +147,7 @@ class Bible {
         return bookNames;
     }
 
-    static ArrayList<String> getChaptersForBook(Context c, File bibleFile, String book) {
+    static ArrayList<String> getChaptersForBook(Context c, DocumentFile bibleFile, String book) {
         Log.d("d","getChaptersForBook() called");
 
         ArrayList<String> chapters = new ArrayList<>();
@@ -217,7 +217,7 @@ class Bible {
         return chapters;
     }
 
-    static void getVersesForChapter(File bibleFile, String book, String chapter) {
+    static void getVersesForChapter(DocumentFile bibleFile, String book, String chapter) {
         Log.d("d","getVersesForChapter() called");
 
         PopUpBibleXMLFragment.bibleVerses = new ArrayList<>();
@@ -381,7 +381,7 @@ class Bible {
         }
         @Override
         protected String doInBackground(String... addresses) {
-            response = "";
+            StringBuilder sb = new StringBuilder();
             for (String address:addresses) {
                 URL url;
                 HttpURLConnection urlConnection = null;
@@ -392,7 +392,8 @@ class Bible {
                     BufferedReader buffer = new BufferedReader(new InputStreamReader(in));
                     String s;
                     while ((s = buffer.readLine()) != null) {
-                        response += "\n" + s;
+                        sb.append("\n");
+                        sb.append(s);
 /*
                         if (s.contains("<meta name=\"twitter:title\" content=\"")) {
                             gottitle=true;
@@ -418,7 +419,7 @@ class Bible {
                     }
                 }
             }
-            return response;
+            return response = sb.toString();
         }
 
         @SuppressWarnings("deprecation")

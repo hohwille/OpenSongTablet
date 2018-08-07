@@ -88,6 +88,7 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.SetItemViewHolder> {
         setitemViewHolder.vCard.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                PopUpSetViewNew popUpSetViewNew = new PopUpSetViewNew();
                 FullscreenActivity.songfilename = songname;
                 if (songfolder.equals(FullscreenActivity.mainfoldername)) {
                     FullscreenActivity.whatsongforsetwork = "$**_" + songname + "_**$";
@@ -113,14 +114,15 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.SetItemViewHolder> {
                 }
 
                 if (issue) {
-                    SetActions.indexSongInSet();
+                    SetActions setActions = new SetActions();
+                    setActions.indexSongInSet();
                 }
 
                 if (FullscreenActivity.whattodo.equals("setitemvariation")) {
-                    PopUpSetViewNew.makeVariation(c);
+                    popUpSetViewNew.makeVariation(c);
 
                 } else {
-                    PopUpSetViewNew.loadSong();
+                    popUpSetViewNew.loadSong();
                 }
             }
         });

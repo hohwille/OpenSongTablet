@@ -10,13 +10,14 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
+import android.net.Uri;
 import android.support.annotation.Nullable;
+import android.support.v4.provider.DocumentFile;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
-import java.io.File;
 import java.util.ArrayList;
 
 public class DrawNotes extends View {
@@ -325,12 +326,12 @@ public class DrawNotes extends View {
         setLayerType(View.LAYER_TYPE_SOFTWARE, canvasPaint);
     }
 
-    public void loadImage(File file) {
+    public void loadImage(Uri file) {
         touchisup = false;
         try {
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inPreferredConfig = Bitmap.Config.ARGB_8888;
-            Bitmap bitmap = BitmapFactory.decodeFile(file.toString(), options);
+            Bitmap bitmap = BitmapFactory.decodeFile(file.getEncodedPath(), options);
             canvasBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
             bitmap.recycle();
             //drawCanvas = new Canvas(canvasBitmap);
@@ -347,7 +348,7 @@ public class DrawNotes extends View {
         invalidate();
     }
 
-    public void startNew(File file){
+    public void startNew(Context c, Uri file){
         touchisup = true;
         paths = new ArrayList<>();
         undonePaths = new ArrayList<>();
@@ -360,8 +361,10 @@ public class DrawNotes extends View {
 
         imageloaded = false;
         FullscreenActivity.saveHighlight = false;
+
+        DocumentFile df = DocumentFile.fromSingleUri(c,file);
         try {
-            if (file==null || !file.delete()) {
+            if (df==null || !df.delete()) {
                 Log.d("d","Unable to delete old highlighter note ("+file+")");
             }
         } catch (Exception e) {

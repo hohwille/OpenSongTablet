@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.support.v4.provider.DocumentFile;
 import android.util.Log;
 
 import com.itextpdf.text.Document;
@@ -23,14 +24,10 @@ import org.xmlpull.v1.XmlPullParserFactory;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.StringReader;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -38,50 +35,46 @@ import java.util.Calendar;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-public class ExportPreparer extends Activity {
+public class ExportPreparer {
 
-	private static String setxml = "";
-	static String settext = "";
-	private static String song_title = "";
-	private static String song_author = "";
-    private static String song_hymnnumber = "";
-	private static String song_key = "";
-    private static File songfile = null;
-    private static ArrayList<String> filesinset = new ArrayList<>();
-	private static ArrayList<String> filesinset_ost = new ArrayList<>();
-    static Image image;
+	private String setxml = "";
+	String settext = "";
+	private String song_title = "", song_author = "", song_hymnnumber = "", song_key = "";
+    private DocumentFile songfile = null;
+    private ArrayList<String> filesinset = new ArrayList<>(), filesinset_ost = new ArrayList<>();
+    Image image;
     //static Backup_Create backup_create;
     @SuppressLint("StaticFieldLeak")
-    private static Backup_Create_Selected backup_create_selected;
+    private Backup_Create_Selected backup_create_selected;
     Context context;
     @SuppressLint("StaticFieldLeak")
     static Activity activity;
-    static Intent emailIntent;
-    static String folderstoexport = "";
-    private static ZipOutputStream outSelected;
+    String folderstoexport = "";
+    private ZipOutputStream outSelected;
 
-	private static boolean setParser(Context c) throws IOException, XmlPullParserException {
+	private boolean setParser(Context c, DocumentFile homeFolder) throws IOException, XmlPullParserException {
+        StorageAccess storageAccess = new StorageAccess();
 
-        settext = "";
+        StringBuilder settext = new StringBuilder();
         FullscreenActivity.exportsetfilenames.clear();
         FullscreenActivity.exportsetfilenames_ost.clear();
         filesinset.clear();
         filesinset_ost.clear();
 
 		// First up, load the set
-		File settoparse = new File(FullscreenActivity.dirsets + "/" + FullscreenActivity.settoload);
-		if (!settoparse.isFile() || !settoparse.exists()) {
+        DocumentFile settoparse= storageAccess.getFileLocationAsDocumentFile(c,homeFolder,"Sets","",FullscreenActivity.settoload);
+        if (!settoparse.isFile() || !settoparse.exists()) {
 			return false;
 		}
 
 		try {
-			FileInputStream inputStreamSet = new FileInputStream(settoparse);
-			InputStreamReader streamReaderSet = new InputStreamReader(inputStreamSet);
+		    InputStream is = storageAccess.getInputStream(c,homeFolder,"Sets","",FullscreenActivity.settoload);
+			InputStreamReader streamReaderSet = new InputStreamReader(is);
 			BufferedReader bufferedReaderSet = new BufferedReader(streamReaderSet);
-			setxml = readTextFile(inputStreamSet);
-			inputStreamSet.close();
+			setxml = storageAccess.readTextFile(c,is);
+			is.close();
 			bufferedReaderSet.close();
-			inputStreamSet.close(); // close the file
+			is.close(); // close the file
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -96,122 +89,140 @@ public class ExportPreparer extends Activity {
 		xpp.setInput(new StringReader(setxml));
 		int eventType;
 
+		LoadXML loadXML = new LoadXML();
+
 		eventType = xpp.getEventType();
 		while (eventType != XmlPullParser.END_DOCUMENT) {
 			if (eventType == XmlPullParser.START_TAG) {
 				if (xpp.getName().equals("slide_group")) {
-					if (xpp.getAttributeValue(null,"type").equals("song")) {
-						songfile = null;
-                        String thisline;
-						songfile = new File(FullscreenActivity.homedir + "/Songs/" + LoadXML.parseFromHTMLEntities(xpp.getAttributeValue(null,"path")) + LoadXML.parseFromHTMLEntities(xpp.getAttributeValue(null,"name")));
-						// Ensure there is a folder '/'
-                        if (xpp.getAttributeValue(null,"path").equals("")) {
-                            thisline = "/" + LoadXML.parseFromHTMLEntities(xpp.getAttributeValue(null,"name"));
-                        } else {
-                            thisline = LoadXML.parseFromHTMLEntities(xpp.getAttributeValue(null,"path")) + LoadXML.parseFromHTMLEntities(xpp.getAttributeValue(null,"name"));
-                        }
-						filesinset.add(thisline);
-						filesinset_ost.add(thisline);
-
-                        // Set the default values exported with the text for the set
-                        song_title = LoadXML.parseFromHTMLEntities(xpp.getAttributeValue(null,"name"));
-						song_author = "";
-						song_hymnnumber = "";
-						song_key = "";
-                        // Now try to improve on this info
-						if (songfile.exists() && songfile.isFile()) {
-							// Read in the song title, author, copyright, hymnnumber, key
-							getSongData();
-						}
-						settext = settext + song_title;
-						if (!song_author.isEmpty()) {
-							settext = settext + ", " + song_author;
-						}
-						if (!song_hymnnumber.isEmpty()) {
-							settext = settext + ", #" + song_hymnnumber;
-						}
-						if (!song_key.isEmpty()) {
-							settext = settext + " (" + song_key + ")";
-						}
-						settext = settext + "\n";
-					} else if (xpp.getAttributeValue(null,"type").equals("scripture")) {
-						settext = settext + LoadXML.parseFromHTMLEntities(xpp.getAttributeValue(null,"name")) + "\n";
-
-					} else if (xpp.getAttributeValue(null,"type").equals("custom")) {
-                        // Decide if this is a note or a slide
-                        if (xpp.getAttributeValue(null,"name").contains("# " + c.getResources().getString(R.string.note) + " # - ")) {
-                            String nametemp = LoadXML.parseFromHTMLEntities(xpp.getAttributeValue(null,"name"));
-                            nametemp = nametemp.replace("# " + c.getResources().getString(R.string.note) + " # - ","");
-                            settext = settext + nametemp + "\n";
-                        } else {
-                            settext = settext + LoadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "name")) + "\n";
-                        }
-					} else if (xpp.getAttributeValue(null,"type").equals("image")) {
-                        // Go through the descriptions of each image and extract the absolute file locations
-                        boolean allimagesdone = false;
-                        ArrayList<String> theseimages = new ArrayList<>();
-						String imgname;
-						imgname = LoadXML.parseFromHTMLEntities(xpp.getAttributeValue(null,"name"));
-                        while (!allimagesdone) { // Keep iterating unless the current eventType is the end of the document
-                            if (eventType == XmlPullParser.START_TAG) {
-                                if (xpp.getName().equals("description")) {
-                                    xpp.next();
-                                    theseimages.add(LoadXML.parseFromHTMLEntities(xpp.getText()));
-                                    filesinset.add(LoadXML.parseFromHTMLEntities(xpp.getText()));
-                                    filesinset_ost.add(LoadXML.parseFromHTMLEntities(xpp.getText()));
-                                }
-
-                            } else if (eventType == XmlPullParser.END_TAG) {
-                                if (xpp.getName().equals("slide_group")) {
-                                    allimagesdone = true;
-                                }
+                    switch (xpp.getAttributeValue(null, "type")) {
+                        case "song":
+                            songfile = null;
+                            String thisline;
+                            songfile = storageAccess.getFileLocationAsDocumentFile(c,homeFolder, "Songs",
+                                    loadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "path")),
+                                    loadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "name")));
+                            // Ensure there is a folder '/'
+                            if (xpp.getAttributeValue(null, "path").equals("")) {
+                                thisline = "/" + loadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "name"));
+                            } else {
+                                thisline = loadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "path"))
+                                        + loadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "name"));
                             }
+                            filesinset.add(thisline);
+                            filesinset_ost.add(thisline);
 
-                            eventType = xpp.next(); // Set the current event type from the return value of next()
-                        }
-                        // Go through each of these images and add a line for each one
-                        settext = settext + imgname + "\n";
-                        for (int im=0;im<theseimages.size();im++) {
-                            settext = settext + "     - " + theseimages.get(im) + "\n";
-                        }
-					}
+                            // Set the default values exported with the text for the set
+                            song_title = loadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "name"));
+                            song_author = "";
+                            song_hymnnumber = "";
+                            song_key = "";
+                            // Now try to improve on this info
+                            if (songfile.exists() && songfile.isFile()) {
+                                // Read in the song title, author, copyright, hymnnumber, key
+                                getSongData(c);
+                            }
+                            settext.append(song_title);
+                            if (!song_author.isEmpty()) {
+                                settext.append(", ");
+                                settext.append(song_author);
+                            }
+                            if (!song_hymnnumber.isEmpty()) {
+                                settext.append(", #");
+                                settext.append(song_hymnnumber);
+                            }
+                            if (!song_key.isEmpty()) {
+                                settext.append(" (");
+                                settext.append(song_key);
+                                settext.append(")");
+                            }
+                            settext.append("\n");
+                            break;
+                        case "scripture":
+                            settext.append(loadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "name")));
+                            settext.append("\n");
+
+                            break;
+                        case "custom":
+                            // Decide if this is a note or a slide
+                            if (xpp.getAttributeValue(null, "name").contains("# " + c.getResources().getString(R.string.note) + " # - ")) {
+                                String nametemp = loadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "name"));
+                                nametemp = nametemp.replace("# " + c.getResources().getString(R.string.note) + " # - ", "");
+                                settext.append(nametemp);
+                                settext.append("\n");
+                            } else {
+                                settext.append(loadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "name")));
+                                settext.append("\n");
+                            }
+                            break;
+                        case "image":
+                            // Go through the descriptions of each image and extract the absolute file locations
+                            boolean allimagesdone = false;
+                            ArrayList<String> theseimages = new ArrayList<>();
+                            String imgname;
+                            imgname = loadXML.parseFromHTMLEntities(xpp.getAttributeValue(null, "name"));
+                            while (!allimagesdone) { // Keep iterating unless the current eventType is the end of the document
+                                if (eventType == XmlPullParser.START_TAG) {
+                                    if (xpp.getName().equals("description")) {
+                                        xpp.next();
+                                        theseimages.add(loadXML.parseFromHTMLEntities(xpp.getText()));
+                                        filesinset.add(loadXML.parseFromHTMLEntities(xpp.getText()));
+                                        filesinset_ost.add(loadXML.parseFromHTMLEntities(xpp.getText()));
+                                    }
+
+                                } else if (eventType == XmlPullParser.END_TAG) {
+                                    if (xpp.getName().equals("slide_group")) {
+                                        allimagesdone = true;
+                                    }
+                                }
+
+                                eventType = xpp.next(); // Set the current event type from the return value of next()
+                            }
+                            // Go through each of these images and add a line for each one
+                            settext.append(imgname);
+                            settext.append("\n");
+                            for (int im = 0; im < theseimages.size(); im++) {
+                                settext.append("     - ");
+                                settext.append(theseimages.get(im));
+                                settext.append("\n");
+                            }
+                            break;
+                    }
 				}
 			}
 			eventType = xpp.next();		
 		}
 
 		// Send the settext back to the FullscreenActivity as emailtext
-		FullscreenActivity.emailtext = settext;
+		FullscreenActivity.emailtext = settext.toString();
         FullscreenActivity.exportsetfilenames = filesinset;
         FullscreenActivity.exportsetfilenames_ost = filesinset_ost;
         return true;
 	}
 
-	private static void getSongData() throws XmlPullParserException, IOException {
-		// Parse the song xml.
+	private void getSongData(Context c) throws XmlPullParserException, IOException {
+        StorageAccess storageAccess = new StorageAccess();
+
+        // Parse the song xml.
 		// Grab the title, author, lyrics_withchords, lyrics_withoutchords, copyright, hymnnumber, key
 
 		// Initialise all the xml tags a song should have that we want
 		String songxml = "";
 		song_title = "";
 		song_author = "";
-        String song_lyrics_withchords = "";
-        String song_lyrics_withoutchords = "";
-        //String song_copyright = "";
-		song_hymnnumber = "";
+        //String song_lyrics_withchords = "";
+        //StringBuilder song_lyrics_withoutchords = new StringBuilder();
+        song_hymnnumber = "";
 		song_key = "";
 
 		try {
-			FileInputStream inputStreamSong = new FileInputStream(songfile);
+		    InputStream inputStreamSong = storageAccess.getInputStreamFromUri(c,songfile.getUri());
 			InputStreamReader streamReaderSong = new InputStreamReader(inputStreamSong);
             BufferedReader bufferedReaderSong = new BufferedReader(streamReaderSong);
-			songxml = readTextFile(inputStreamSong);
+			songxml = storageAccess.readTextFile(c, inputStreamSong);
 			inputStreamSong.close();
 			bufferedReaderSong.close();
 			inputStreamSong.close(); // close the file
-		} catch (java.io.FileNotFoundException e) {
-			// file doesn't exist
-			//song_title = songfile.toString();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -238,66 +249,55 @@ public class ExportPreparer extends Activity {
 
 		xppSong.setInput(new StringReader(songxml));
 
+		LoadXML loadXML = new LoadXML();
 		int eventType;
 		eventType = xppSong.getEventType();
 		while (eventType != XmlPullParser.END_DOCUMENT) {
 			if (eventType == XmlPullParser.START_TAG) {
-				if (xppSong.getName().equals("author")) {
-					song_author = LoadXML.parseFromHTMLEntities(xppSong.nextText());
-				/*} else if (xppSong.getName().equals("copyright")) {
-					song_copyright = LoadXML.parseFromHTMLEntities(xppSong.nextText());*/
-				} else if (xppSong.getName().equals("title")) {
-					song_title = LoadXML.parseFromHTMLEntities(xppSong.nextText());
-				} else if (xppSong.getName().equals("lyrics")) {
-					song_lyrics_withchords = LoadXML.parseFromHTMLEntities(xppSong.nextText());
-				} else if (xppSong.getName().equals("hymn_number")) {
-					song_hymnnumber = LoadXML.parseFromHTMLEntities(xppSong.nextText());
-				} else if (xppSong.getName().equals("key")) {
-					song_key = LoadXML.parseFromHTMLEntities(xppSong.nextText());
-				}
+                switch (xppSong.getName()) {
+                    case "author":
+                        song_author = loadXML.parseFromHTMLEntities(xppSong.nextText());
+                        break;
+                    case "title":
+                        song_title = loadXML.parseFromHTMLEntities(xppSong.nextText());
+                        break;
+                    /*case "lyrics":
+                        song_lyrics_withchords = loadXML.parseFromHTMLEntities(xppSong.nextText());
+                        break;*/
+                    case "hymn_number":
+                        song_hymnnumber = loadXML.parseFromHTMLEntities(xppSong.nextText());
+                        break;
+                    case "key":
+                        song_key = loadXML.parseFromHTMLEntities(xppSong.nextText());
+                        break;
+                }
 			}
 			eventType = xppSong.next();
 		}
-		// Remove the chord lines from the song lyrics
+		/*// Remove the chord lines from the song lyrics
 		String[] templyrics = song_lyrics_withchords.split("\n");
 		// Only add the lines that don't start with a .
 		int numlines = templyrics.length;
 		if (numlines>0) {
             for (String templyric : templyrics) {
                 if (!templyric.startsWith(".")) {
-                    song_lyrics_withoutchords = song_lyrics_withoutchords + templyric + "\n";
+                    song_lyrics_withoutchords.append(templyric).append("\n");
                 }
             }
-		}
+		}*/
 	}
 
-	private static String readTextFile(InputStream inputStream) {
-		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+	Intent exportSet(Context c, DocumentFile homeFolder) {
+        StorageAccess storageAccess = new StorageAccess();
 
-		byte buf[] = new byte[1024];
-		int len;
-		try {
-			while ((len = inputStream.read(buf)) != -1) {
-				outputStream.write(buf, 0, len);
-			}
-			outputStream.close();
-			inputStream.close();
-		} catch (IOException e) {
-            e.printStackTrace();
-		}
-		return outputStream.toString();
-	}
-
-	static Intent exportSet(Context c) {
         String nicename = FullscreenActivity.settoload;
         Uri text = null;
         Uri desktop = null;
         Uri osts = null;
-        File newfile;
 
         // Prepare a txt version of the set.
         try {
-            if (!setParser(c)) {
+            if (!setParser(c, homeFolder)) {
                 Log.d("d","Problem parsing the set");
             }
         } catch (Exception e) {
@@ -322,48 +322,35 @@ public class ExportPreparer extends Activity {
         emailIntent.putExtra(Intent.EXTRA_SUBJECT, nicename);
         emailIntent.putExtra(Intent.EXTRA_TITLE, nicename);
         emailIntent.putExtra(Intent.EXTRA_TEXT, nicename + "\n\n" + FullscreenActivity.emailtext);
-        // Check that the export directory exists
-        File exportdir = new File(FullscreenActivity.homedir + "/Export");
 
-        if (!exportdir.mkdirs()) {
-            Log.d("d","Can't create");
-        }
-
-        File setfile  = new File(FullscreenActivity.dirsets + "/" + FullscreenActivity.settoload);
-        File ostsfile = new File(exportdir + "/" + FullscreenActivity.settoload + ".osts");
+        DocumentFile setfile  = storageAccess.getFileLocationAsDocumentFile(c, homeFolder,"Sets", "", FullscreenActivity.settoload);
+        DocumentFile ostsfile  = storageAccess.getFileLocationAsDocumentFile(c, homeFolder, "Export", "", FullscreenActivity.settoload+".osts");
 
         if (!setfile.exists() || !setfile.canRead()) {
             return null;
         }
 
         if (FullscreenActivity.exportText) {
-            newfile = new File(exportdir, FullscreenActivity.settoload + ".txt");
-            writeFile(FullscreenActivity.emailtext, newfile, "text", null);
-            text = Uri.fromFile(newfile);
+            Uri uri = storageAccess.getFileLocationAsDocumentFile(c, homeFolder,"Export", "", FullscreenActivity.settoload+".txt").getUri();
+            storageAccess.writeDocumentFile(c,uri,"text",FullscreenActivity.emailtext,null);
+            text = uri;
         }
 
         FullscreenActivity.emailtext = "";
 
         if (FullscreenActivity.exportDesktop) {
-            desktop = Uri.fromFile(setfile);
+            desktop = setfile.getUri();
         }
 
         if (FullscreenActivity.exportOpenSongAppSet) {
             // Copy the set file to an .osts file
             try {
-                FileInputStream in = new FileInputStream(setfile);
-                FileOutputStream out = new FileOutputStream(ostsfile);
-                byte[] buffer = new byte[1024];
-                int read;
-                while ((read = in.read(buffer)) != -1) {
-                    out.write(buffer, 0, read);
-                }
+                InputStream in = storageAccess.getInputStreamFromUri(c, setfile.getUri());
+                OutputStream out = storageAccess.getOutputStreamFromUri(c, ostsfile.getUri());
+                byte[] buffer = storageAccess.readBytes(in);
+                storageAccess.writeBytes(c,out,buffer);
                 in.close();
-
-                // write the output file (You have now copied the file)
-                out.flush();
-                out.close();
-                osts = Uri.fromFile(ostsfile);
+                osts = ostsfile.getUri();
             } catch (Exception e) {
                 // Error
                 e.printStackTrace();
@@ -388,15 +375,18 @@ public class ExportPreparer extends Activity {
                 // Remove any subfolder from the exportsetfilenames_ost.get(q)
                 String tempsong_ost = FullscreenActivity.exportsetfilenames_ost.get(q);
                 tempsong_ost = tempsong_ost.substring(tempsong_ost.indexOf("/") + 1);
-                File songtoload = new File(FullscreenActivity.dir + "/" + FullscreenActivity.exportsetfilenames.get(q));
-                File ostsongcopy = new File(FullscreenActivity.homedir + "/Notes/_cache/" + tempsong_ost + ".ost");
+
+                DocumentFile songtoload = storageAccess.getFileLocationAsDocumentFile(c,homeFolder, "Songs","",FullscreenActivity.exportsetfilenames.get(q));
+                DocumentFile ostsongcopy = storageAccess.getFileLocationAsDocumentFile(c, homeFolder,"Notes","_cache",tempsong_ost + ".ost");
+
                 boolean isimage = false;
                 if (songtoload.toString().endsWith(".jpg") || songtoload.toString().endsWith(".JPG") ||
                         songtoload.toString().endsWith(".jpeg") || songtoload.toString().endsWith(".JPEG") ||
                         songtoload.toString().endsWith(".gif") || songtoload.toString().endsWith(".GIF") ||
                         songtoload.toString().endsWith(".png") || songtoload.toString().endsWith(".PNG") ||
-                        songtoload.toString().endsWith(".bmp") || songtoload.toString().endsWith(".BMP")) {
-                    songtoload = new File(FullscreenActivity.exportsetfilenames.get(q));
+                        songtoload.toString().endsWith(".bmp") || songtoload.toString().endsWith(".BMP") ||
+                        songtoload.getType().contains("image")) {
+
                     isimage = true;
                 }
 
@@ -404,20 +394,14 @@ public class ExportPreparer extends Activity {
                 if (songtoload.exists()) {
                     try {
                         if (!isimage) {
-                            FileInputStream in = new FileInputStream(songtoload);
-                            FileOutputStream out = new FileOutputStream(ostsongcopy);
+                            InputStream in = storageAccess.getInputStreamFromUri(c,songtoload.getUri());
+                            OutputStream out = storageAccess.getOutputStreamFromUri(c, ostsongcopy.getUri());
 
-                            byte[] buffer = new byte[1024];
-                            int read;
-                            while ((read = in.read(buffer)) != -1) {
-                                out.write(buffer, 0, read);
-                            }
-                            in.close();
-
+                            byte[] buffer = storageAccess.readBytes(in);
                             // write the output file (You have now copied the file)
-                            out.flush();
-                            out.close();
-                            Uri urisongs_ost = Uri.fromFile(ostsongcopy);
+                            storageAccess.writeBytes(c,out,buffer);
+
+                            Uri urisongs_ost = ostsongcopy.getUri();
                             uris.add(urisongs_ost);
                         }
                     } catch (Exception e) {
@@ -429,8 +413,9 @@ public class ExportPreparer extends Activity {
         }
         if (FullscreenActivity.exportDesktop) {
             for (int q = 0; q < FullscreenActivity.exportsetfilenames.size(); q++) {
-                File songtoload = new File(FullscreenActivity.dir + "/" + FullscreenActivity.exportsetfilenames.get(q));
-                Uri urisongs = Uri.fromFile(songtoload);
+                DocumentFile songtoload = storageAccess.getFileLocationAsDocumentFile(c, homeFolder,"Songs", "",
+                        FullscreenActivity.exportsetfilenames.get(q));
+                Uri urisongs = songtoload.getUri();
                 uris.add(urisongs);
             }
         }
@@ -439,7 +424,9 @@ public class ExportPreparer extends Activity {
         return emailIntent;
     }
 
-	static Intent exportSong(Context c, Bitmap bmp) {
+	Intent exportSong(Context c, DocumentFile homeFolder, Bitmap bmp) {
+        StorageAccess storageAccess = new StorageAccess();
+
         // Prepare the appropriate attachments
         String emailcontent = "";
         Uri text = null;
@@ -449,80 +436,76 @@ public class ExportPreparer extends Activity {
         Uri onsong = null;
         Uri image = null;
         Uri pdf = null;
-        File newfile;
+        DocumentFile newfile;
 
         // Prepare a txt version of the song.
         prepareTextFile(c);
         // Check we have a directory to save these
-        File exportdir = new File(FullscreenActivity.homedir + "/Export");
-
-        if (!exportdir.mkdirs()) {
-            Log.d("d","Can't create");
-        }
         emailcontent += FullscreenActivity.exportText_String;
+
         if (FullscreenActivity.exportText) {
-            newfile = new File(exportdir, FullscreenActivity.songfilename + ".txt");
-            writeFile(FullscreenActivity.exportText_String, newfile, "text", null);
-            text = Uri.fromFile(newfile);
+            newfile = storageAccess.getFileLocationAsDocumentFile(c, homeFolder,"Export","",
+                    FullscreenActivity.songfilename+".txt");
+            OutputStream os = storageAccess.getOutputStreamFromUri(c, newfile.getUri());
+            storageAccess.writeStringToFile(c,os,FullscreenActivity.exportText_String);
+            text = newfile.getUri();
         }
 
         if (FullscreenActivity.exportOpenSongApp) {
             // Prepare an ost version of the song.
-            newfile = new File(exportdir, FullscreenActivity.songfilename + ".ost");
-            File filetocopy;
-            if (FullscreenActivity.whichSongFolder.equals(FullscreenActivity.mainfoldername)) {
-                filetocopy = new File(FullscreenActivity.dir + "/" + FullscreenActivity.songfilename);
-            } else {
-                filetocopy =  new File(FullscreenActivity.dir + "/" +
-                        FullscreenActivity.whichSongFolder + "/" + FullscreenActivity.songfilename);
-            }
-            copyFile(filetocopy, newfile);
-            ost = Uri.fromFile(newfile);
+            newfile = storageAccess.getFileLocationAsDocumentFile(c, homeFolder,"Export","",
+                    FullscreenActivity.songfilename+".ost");
+            OutputStream os = storageAccess.getOutputStreamFromUri(c, newfile.getUri());
+            InputStream is = storageAccess.getInputStream(c,homeFolder,"Songs",FullscreenActivity.whichSongFolder,
+                    FullscreenActivity.songfilename);
+            storageAccess.copyFile(c,is,os);
+            ost = newfile.getUri();
         }
 
         if (FullscreenActivity.exportDesktop) {
             // Prepare a desktop version of the song.
-            newfile = new File(exportdir, FullscreenActivity.songfilename);
-            File filetocopy;
-            if (FullscreenActivity.whichSongFolder.equals(FullscreenActivity.mainfoldername)) {
-                filetocopy = new File(FullscreenActivity.dir + "/" + FullscreenActivity.songfilename);
-            } else {
-                filetocopy =  new File(FullscreenActivity.dir + "/" +
-                        FullscreenActivity.whichSongFolder + "/" + FullscreenActivity.songfilename);
-            }
-            copyFile(filetocopy, newfile);
-            desktop = Uri.fromFile(newfile);
+            newfile = storageAccess.getFileLocationAsDocumentFile(c,homeFolder,"Export","",
+                    FullscreenActivity.songfilename);
+            OutputStream os = storageAccess.getOutputStreamFromUri(c, newfile.getUri());
+            InputStream is = storageAccess.getInputStream(c,homeFolder,"Songs",FullscreenActivity.whichSongFolder,
+                    FullscreenActivity.songfilename);
+            storageAccess.copyFile(c,is,os);
+            ost = newfile.getUri();
+
+            desktop = newfile.getUri();
         }
 
         if (FullscreenActivity.exportChordPro) {
             // Prepare a chordpro version of the song.
-            newfile = new File(exportdir, FullscreenActivity.songfilename + ".chopro");
-            prepareChordProFile(c);
-            writeFile(FullscreenActivity.exportChordPro_String, newfile, "chopro", null);
-            chopro = Uri.fromFile(newfile);
+            newfile = storageAccess.getFileLocationAsDocumentFile(c,homeFolder,"Export","",
+                    FullscreenActivity.songfilename+".chopro");
+            storageAccess.writeDocumentFile(c, newfile.getUri(), "chopro", prepareChordProFile(c), null);
+            chopro = newfile.getUri();
         }
 
         if (FullscreenActivity.exportOnSong) {
             // Prepare an onsong version of the song.
-            newfile = new File(exportdir, FullscreenActivity.songfilename + ".onsong");
-            prepareOnSongFile(c);
-            writeFile(FullscreenActivity.exportOnSong_String, newfile, "onsong", null);
-            onsong = Uri.fromFile(newfile);
+            newfile = storageAccess.getFileLocationAsDocumentFile(c,homeFolder,"Export","",
+                    FullscreenActivity.songfilename+".onsong");
+            storageAccess.writeDocumentFile(c, newfile.getUri(), "onsong", prepareOnSongFile(c), null);
+            onsong = newfile.getUri();
         }
 
         if (FullscreenActivity.exportImage) {
             // Prepare an image/png version of the song.
-            newfile = new File(exportdir, FullscreenActivity.songfilename + ".png");
-            writeFile(FullscreenActivity.exportOnSong_String, newfile, "png", bmp);
-            image = Uri.fromFile(newfile);
+            newfile = storageAccess.getFileLocationAsDocumentFile(c,homeFolder,"Export","",
+                    FullscreenActivity.songfilename+".png");
+            storageAccess.writeDocumentFile(c, newfile.getUri(), "png", prepareOnSongFile(c), bmp);
+            image = newfile.getUri();
         }
 
         if (FullscreenActivity.exportPDF) {
             // Prepare a pdf version of the song.
-            newfile = new File(exportdir, FullscreenActivity.songfilename + ".pdf");
-            makePDF(bmp, newfile);
-            //writeFile(c,FullscreenActivity.exportOnSong_String, newfile, "pdf", bmp);
-            pdf = Uri.fromFile(newfile);
+            newfile = storageAccess.getFileLocationAsDocumentFile(c,homeFolder,"Export","",
+                    FullscreenActivity.songfilename+".pdf");
+            storageAccess.writeDocumentFile(c, newfile.getUri(), "onsong", prepareOnSongFile(c), null);
+            makePDF(bmp, storageAccess.getOutputStreamFromUri(c, newfile.getUri()));
+            pdf = newfile.getUri();
         }
 
         Intent emailIntent = new Intent(Intent.ACTION_SEND_MULTIPLE);
@@ -559,7 +542,7 @@ public class ExportPreparer extends Activity {
         return emailIntent;
     }
 
-    static Intent exportBackup(Context c, File f) {
+    private Intent exportBackup(Context c, DocumentFile f) {
         Intent emailIntent = new Intent(Intent.ACTION_SEND_MULTIPLE);
         emailIntent.setType("text/plain");
         emailIntent.putExtra(Intent.EXTRA_TITLE, c.getString(R.string.backup_info));
@@ -567,7 +550,7 @@ public class ExportPreparer extends Activity {
         emailIntent.putExtra(Intent.EXTRA_TEXT,  c.getString(R.string.backup_info));
         FullscreenActivity.emailtext = "";
 
-        Uri uri = Uri.fromFile(f);
+        Uri uri = f.getUri();
         ArrayList<Uri> uris = new ArrayList<>();
         uris.add(uri);
 
@@ -575,8 +558,10 @@ public class ExportPreparer extends Activity {
         return emailIntent;
     }
 
-    static Intent exportActivityLog(Context c) {
-	    String title = c.getString(R.string.app_name) + ": " + c.getString(R.string.edit_song_ccli);
+    Intent exportActivityLog(Context c, DocumentFile homeFolder) {
+        StorageAccess storageAccess = new StorageAccess();
+
+        String title = c.getString(R.string.app_name) + ": " + c.getString(R.string.edit_song_ccli);
 	    String subject = title + " - " + c.getString(R.string.ccli_view);
 	    String text = c.getString(R.string.ccli_church) + ": " + FullscreenActivity.ccli_church + "\n";
 	    text += c.getString(R.string.ccli_licence) + ": " + FullscreenActivity.ccli_licence + "\n\n";
@@ -587,19 +572,20 @@ public class ExportPreparer extends Activity {
         emailIntent.putExtra(Intent.EXTRA_TEXT, text);
         // Add the attachments
         ArrayList<Uri> uris = new ArrayList<>();
-        File f = new File(FullscreenActivity.dirsettings,"ActivityLog.xml");
+        DocumentFile f = storageAccess.getFileLocationAsDocumentFile(c,homeFolder,"Settings","","ActivityLog.xml");
         if (!f.exists()) {
-            PopUpCCLIFragment.createBlankXML();
+            PopUpCCLIFragment popUpCCLIFragment = new PopUpCCLIFragment();
+            popUpCCLIFragment.createBlankXML(c);
         }
-        uris.add(Uri.fromFile(f));
+        uris.add(f.getUri());
         emailIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
         return emailIntent;
     }
 
-    private static void makePDF(Bitmap bmp, File file) {
+    private void makePDF(Bitmap bmp, OutputStream os) {
         Document document = new Document();
         try {
-            PdfWriter.getInstance(document, new FileOutputStream(file));
+            PdfWriter.getInstance(document, os);
             document.addAuthor(FullscreenActivity.mAuthor.toString());
             document.addTitle(FullscreenActivity.mTitle.toString());
             document.addCreator("OpenSongApp");
@@ -622,7 +608,7 @@ public class ExportPreparer extends Activity {
         }
     }
 
-    private static void addImage(Document document, Bitmap bmp) {
+    private void addImage(Document document, Bitmap bmp) {
         try {
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
             bmp.compress(Bitmap.CompressFormat.PNG, 100, stream);
@@ -661,23 +647,27 @@ public class ExportPreparer extends Activity {
         }
     }
 
-    static void createSelectedOSB(Context c) {
-        activity = (Activity) c;
+    void createSelectedOSB(Context c, DocumentFile homeFolder) {
+	    activity = (Activity) c;
         if (backup_create_selected!=null) {
             backup_create_selected.cancel(true);
         }
-        backup_create_selected = new Backup_Create_Selected(c);
+        backup_create_selected = new Backup_Create_Selected(c, homeFolder);
         backup_create_selected.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
-    private static class Backup_Create_Selected extends AsyncTask<String, Void, String> {
+
+    @SuppressLint("StaticFieldLeak")
+    class Backup_Create_Selected extends AsyncTask<String, Void, String> {
         @SuppressLint("StaticFieldLeak")
         Context c;
-        Backup_Create_Selected(Context context) {
+        DocumentFile homeFolder;
+        Backup_Create_Selected(Context context, DocumentFile home) {
             c = context;
+            homeFolder = home;
         }
         @Override
         protected String doInBackground(String... strings) {
-            return makeBackupZipSelected();
+            return makeBackupZipSelected(c, homeFolder);
         }
 
         boolean cancelled = false;
@@ -690,10 +680,11 @@ public class ExportPreparer extends Activity {
         public void onPostExecute(String s) {
             if (!cancelled) {
                 try {
-                    File f = new File(s);
+                    StorageAccess storageAccess = new StorageAccess();
+                    DocumentFile f = storageAccess.getFileLocationAsDocumentFile(c,  homeFolder,"", "", s);
                     FullscreenActivity.myToastMessage = c.getString(R.string.backup_success);
                     ShowToast.showToast(c);
-                    emailIntent = exportBackup(c, f);
+                    Intent emailIntent = exportBackup(c, f);
                     activity.startActivityForResult(Intent.createChooser(emailIntent, c.getString(R.string.backup_info)), 12345);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -701,24 +692,25 @@ public class ExportPreparer extends Activity {
             }
         }
     }
-    static String makeBackupZipSelected() {
+    private String makeBackupZipSelected(Context ctx, DocumentFile homeFolder) {
         // Get the date for the file
         Calendar c = Calendar.getInstance();
         System.out.println("Current time => " + c.getTime());
 
         SimpleDateFormat df = new SimpleDateFormat("yyyy_MM_dd", FullscreenActivity.locale);
         String formattedDate = df.format(c.getTime());
-        String backup = FullscreenActivity.homedir + "/OpenSongBackup_" + formattedDate + ".osb";
-        String songfolder = FullscreenActivity.dir.toString();
+        String backup = "OpenSongBackup_" + formattedDate + ".osb";
         try {
-            zipDirSelected(backup, songfolder);
+            zipDirSelected(ctx, homeFolder, backup);
         } catch (Exception e) {
             e.printStackTrace();
         }
         return backup;
     }
-    private static void zipDirSelected(String zipFileName, String dir) throws Exception {
-        outSelected = new ZipOutputStream(new FileOutputStream(zipFileName));
+    private void zipDirSelected(Context c, DocumentFile homeFolder, String zipFileName) throws Exception {
+        StorageAccess storageAccess = new StorageAccess();
+        OutputStream os = storageAccess.getOutputStream(c, homeFolder,"", "", zipFileName);
+        outSelected = new ZipOutputStream(os);
         System.out.println("Creating : " + zipFileName);
 
         // Go through each of the selected folders and add them to the zip file
@@ -727,27 +719,32 @@ public class ExportPreparer extends Activity {
             if (!whichfolders[i].equals("")) {
                 whichfolders[i] = whichfolders[i].replace("%__", "");
                 whichfolders[i] = whichfolders[i].replace("__%", "");
-                File dirObj = new File(dir + "/" + whichfolders[i]);
-                addDirSelected(dirObj);
+                DocumentFile dirObj = storageAccess.getFileLocationAsDocumentFile(c, homeFolder,"Songs", whichfolders[i],"");
+                addDirSelected(c, homeFolder, dirObj);
             }
         }
         outSelected.close();
     }
-    private static void addDirSelected(File dirObj) throws IOException {
-        if (dirObj.toString().contains("/"+FullscreenActivity.mainfoldername)) {
-            dirObj = new File(FullscreenActivity.dir.toString());
-        }
-        File[] files = dirObj.listFiles();
-        byte[] tmpBuf = new byte[1024];
+    private void addDirSelected(Context c, DocumentFile homeFolder, DocumentFile dirObj) throws IOException {
+        StorageAccess storageAccess = new StorageAccess();
+        DocumentFile[] files = dirObj.listFiles();
+	    byte[] tmpBuff;
 
-        for (File file : files) {
+        for (DocumentFile file : files) {
             if (file.isFile()) {
-                FileInputStream in = new FileInputStream(file.getAbsolutePath());
-                System.out.println(" Adding: " + file.getAbsolutePath().replace(FullscreenActivity.dir.toString() + "/", ""));
-                outSelected.putNextEntry(new ZipEntry((file.getAbsolutePath()).replace(FullscreenActivity.dir.toString() + "/", "")));
+                InputStream in = storageAccess.getInputStreamFromUri(c,file.getUri());
+                // Try to get the absolute path and remove the rubbish (i.e. Songs folder)
+                tmpBuff = storageAccess.readBytes(in);
+                String songspath = storageAccess.getFileLocationAsDocumentFile(c,homeFolder,"Songs","","").getUri().getPath();
+                String path = file.getUri().getPath();
+
+                path = path.replace (songspath,"");
+
+                System.out.println(" Adding: " + path);
+                outSelected.putNextEntry(new ZipEntry(path));
                 int len;
-                while ((len = in.read(tmpBuf)) > 0) {
-                    outSelected.write(tmpBuf, 0, len);
+                while ((len = in.read(tmpBuff)) > 0) {
+                    outSelected.write(tmpBuff, 0, len);
                 }
                 outSelected.closeEntry();
                 in.close();
@@ -755,101 +752,66 @@ public class ExportPreparer extends Activity {
         }
     }
 
-    private static void prepareChordProFile(Context c) {
+    private String prepareChordProFile(Context c) {
         // This converts an OpenSong file into a ChordPro file
         FullscreenActivity.exportChordPro_String = "";
-        String s = "{ns}\n";
-        s += "{t:"+FullscreenActivity.mTitle+"}\n";
-        s += "{st:"+FullscreenActivity.mAuthor+"}\n\n";
+        StringBuilder s = new StringBuilder("{ns}\n");
+        s.append("{t:").append(FullscreenActivity.mTitle).append("}\n");
+        s.append("{st:").append(FullscreenActivity.mAuthor).append("}\n\n");
 
         // Go through each song section and add the ChordPro formatted chords
         for (int f=0;f<FullscreenActivity.songSections.length;f++) {
-            s += ProcessSong.songSectionChordPro(c, f, false);
+            s.append(ProcessSong.songSectionChordPro(c, f, false));
         }
 
-        s = s.replace("\n\n\n","\n\n");
-        FullscreenActivity.exportChordPro_String = s;
+        s = new StringBuilder(s.toString().replace("\n\n\n", "\n\n"));
+        FullscreenActivity.exportChordPro_String = s.toString();
+        return s.toString();
     }
-    private static void prepareOnSongFile(Context c) {
+    private String prepareOnSongFile(Context c) {
         // This converts an OpenSong file into a OnSong file
         FullscreenActivity.exportOnSong_String = "";
-        String s = FullscreenActivity.mTitle+"\n";
+        StringBuilder s = new StringBuilder(FullscreenActivity.mTitle + "\n");
         if (!FullscreenActivity.mAuthor.equals("")) {
-            s += FullscreenActivity.mAuthor + "\n";
+            s.append(FullscreenActivity.mAuthor).append("\n");
         }
         if (!FullscreenActivity.mCopyright.equals("")) {
-            s += "Copyright: "+FullscreenActivity.mCopyright + "\n";
+            s.append("Copyright: ").append(FullscreenActivity.mCopyright).append("\n");
         }
         if (!FullscreenActivity.mKey.equals("")) {
-            s += "Key: " + FullscreenActivity.mKey + "\n\n";
+            s.append("Key: ").append(FullscreenActivity.mKey).append("\n\n");
         }
 
         // Go through each song section and add the ChordPro formatted chords
         for (int f=0;f<FullscreenActivity.songSections.length;f++) {
-            s += ProcessSong.songSectionChordPro(c, f, true);
+            s.append(ProcessSong.songSectionChordPro(c, f, true));
         }
 
-        s = s.replace("\n\n\n","\n\n");
-        FullscreenActivity.exportOnSong_String = s;
+        s = new StringBuilder(s.toString().replace("\n\n\n", "\n\n"));
+        FullscreenActivity.exportOnSong_String = s.toString();
+        return s.toString();
     }
-    private static void prepareTextFile(Context c) {
+    private void prepareTextFile(Context c) {
         // This converts an OpenSong file into a text file
         FullscreenActivity.exportText_String = "";
-        String s = FullscreenActivity.mTitle+"\n";
+        StringBuilder s = new StringBuilder(FullscreenActivity.mTitle + "\n");
         if (!FullscreenActivity.mAuthor.equals("")) {
-            s += FullscreenActivity.mAuthor + "\n";
+            s.append(FullscreenActivity.mAuthor).append("\n");
         }
         if (!FullscreenActivity.mCopyright.equals("")) {
-            s += "Copyright: "+FullscreenActivity.mCopyright + "\n";
+            s.append("Copyright: ").append(FullscreenActivity.mCopyright).append("\n");
         }
         if (!FullscreenActivity.mKey.equals("")) {
-            s += "Key: " + FullscreenActivity.mKey + "\n\n";
+            s.append("Key: ").append(FullscreenActivity.mKey).append("\n\n");
         }
 
         // Go through each song section and add the text trimmed lines
         for (int f=0;f<FullscreenActivity.songSections.length;f++) {
-            s += ProcessSong.songSectionText(c, f);
+            s.append(ProcessSong.songSectionText(c, f));
         }
 
-        s = s.replace("\n\n\n","\n\n");
-        FullscreenActivity.exportText_String = s;
-    }
-    private static void writeFile(String s, File f, String what, Bitmap bmp) {
-        if (what.equals("png")) {
-            try {
-                FileOutputStream out = new FileOutputStream(f);
-                bmp.compress(Bitmap.CompressFormat.PNG, 100, out);
-                out.flush();
-                out.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } else {
-            try {
-                new FileOutputStream (new File(f.getAbsolutePath()), true);
-                FileOutputStream fOut = new FileOutputStream(f);
-                OutputStreamWriter outputStreamWriter = new OutputStreamWriter(fOut);
-                outputStreamWriter.write(s);
-                outputStreamWriter.close();
-            } catch (Exception e) {
-                Log.e("Exception", "File write failed: " + e.toString());
-            }
-        }
-    }
-    private static void copyFile(File from, File to) {
-        try {
-            InputStream is=new FileInputStream(from);
-            OutputStream os=new FileOutputStream(to);
-            byte[] buff=new byte[1024];
-            int len;
-            while((len=is.read(buff))>0){
-                os.write(buff,0,len);
-            }
-            is.close();
-            os.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        s = new StringBuilder(s.toString().replace("\n\n\n", "\n\n"));
+        FullscreenActivity.exportText_String = s.toString();
     }
 
 }

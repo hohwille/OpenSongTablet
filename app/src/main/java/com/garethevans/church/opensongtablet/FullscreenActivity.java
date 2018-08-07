@@ -1,5 +1,7 @@
 package com.garethevans.church.opensongtablet;
 
+// This will be the holder for the variables
+// It wil also be called if the user clicks on a recognised file
 import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -7,7 +9,6 @@ import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Typeface;
 import android.media.MediaPlayer;
@@ -19,11 +20,9 @@ import android.media.midi.MidiReceiver;
 import android.net.Uri;
 import android.nfc.NfcAdapter;
 import android.os.Build;
-import android.os.Bundle;
-import android.os.Environment;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.support.v7.app.ActionBar;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.widget.Button;
@@ -34,7 +33,6 @@ import com.peak.salut.Salut;
 import com.peak.salut.SalutDataReceiver;
 import com.peak.salut.SalutServiceData;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Map;
@@ -42,44 +40,309 @@ import java.util.Map;
 //import com.squareup.leakcanary.LeakCanary;
 //import com.squareup.leakcanary.RefWatcher;
 
+class FullscreenActivity implements PopUpImportExportOSBFragment.MyInterface, PopUpImportExternalFile.MyInterface {
+
+    // DEFINE THE VARIABLES TO BE USED IN THE APP
+    // Then initialise them if required with the main setter
+
+    // Here are the methods associated with FullscreenActivity
+
+    void mainSetterOfVariables(Context c) {
+        // This is called asynchronously when the app starts from the BootUpCheck activity
+        // Once it is done the app will start
+
+        // First up, load all of the variables
+        myPreferences = c.getSharedPreferences("OpenSong",Context.MODE_PRIVATE);
+        Preferences.loadPreferences();
+
+        // Now go through some  of these variables loaded and set the app variables accordingly
+        if (whattodo == null) {
+            whattodo = "";
+        }
+        // If the song was loaded last time correctly, then we are good to continue
+        // If it didn't load, then reset the starting song and folder
+        if (!Preferences.wasSongLoaded()) {
+            whichSongFolder = "";
+            songfilename = "Welcome to OpenSongApp";
+        }
+        // If whichSongFolder is empty, reset to main
+        if (whichSongFolder == null || whichSongFolder.isEmpty() || whichSongFolder.equals("")) {
+            whichSongFolder = mainfoldername;
+        }
+
+        // Set up some string values
+        mainfoldername = c.getResources().getString(R.string.mainfoldername);
+        timesigs = c.getResources().getStringArray(R.array.timesig);
+
+        // Next set the locale of the app
+        guessLocale(c);
+        changeLocale(c);
+
+        // Get the song folders
+        StorageAccess storageAccess = new StorageAccess();
+        DocumentFile homeFolder = storageAccess.getHomeFolder(c);
+
+
+        // Test for NFC capability
+        testForNFC(c);
+
+        // Initialise api
+        currentapiVersion = Build.VERSION.SDK_INT;
+
+        // Capable of dual head presentations
+        dualDisplayCapable = currentapiVersion >= 17;
+
+        // Set up the available typefaces
+        // Initialise the typefaces available
+        initialiseTypefaces(c);
+
+        // Set up the user preferences for page colours and fonts
+        SetUpColours.colours();
+        SetTypeFace setTypeFace = new SetTypeFace();
+        setTypeFace.setTypeface(c, homeFolder);
+
+        // Copy assets (background images)
+        storageAccess.copyAssets(c, homeFolder);
+
+        // BootUpCheck will save the preferences before starting the app, so any fixes are saved
+    }
+
+    private void guessLocale(Context c) {
+        locale = Locale.getDefault();
+        if  (locale==null) {
+            locale = new Locale(Locale.getDefault().getDisplayLanguage());
+        }
+
+        SetLocale.setLocale(c);
+
+        if (!locale.toString().equals("af") && !locale.toString().equals("cz") && !locale.toString().equals("de") &&
+                !locale.toString().equals("el") && !locale.toString().equals("es") && !locale.toString().equals("fr") &&
+                !locale.toString().equals("hu") && !locale.toString().equals("it") && !locale.toString().equals("ja") &&
+                !locale.toString().equals("pl") && !locale.toString().equals("pt") && !locale.toString().equals("ru") &&
+                !locale.toString().equals("sr") && !locale.toString().equals("zh")) {
+            locale = new Locale("en");
+        }
+    }
+    private void changeLocale(Context c) {
+        SetLocale.setLocale(c);
+    }
+    private void initialiseTypefaces(Context c) {
+        typeface0 = Typeface.DEFAULT;
+        typeface1 = Typeface.MONOSPACE;
+        typeface2 = Typeface.SANS_SERIF;
+        typeface3 = Typeface.SERIF;
+        typeface4 = Typeface.createFromAsset(c.getAssets(), "fonts/FiraSansOT-Light.otf");
+        typeface4i = Typeface.createFromAsset(c.getAssets(), "fonts/FiraSans-LightItalic.otf");
+        typeface5 = Typeface.createFromAsset(c.getAssets(), "fonts/FiraSansOT-Regular.otf");
+        typeface5i = Typeface.createFromAsset(c.getAssets(), "fonts/FiraSans-Italic.otf");
+        typeface6 = Typeface.createFromAsset(c.getAssets(), "fonts/KaushanScript-Regular.otf");
+        typeface7 = Typeface.createFromAsset(c.getAssets(), "fonts/Lato-Lig.ttf");
+        typeface7i = Typeface.createFromAsset(c.getAssets(), "fonts/Lato-LigIta.ttf");
+        typeface8 = Typeface.createFromAsset(c.getAssets(), "fonts/Lato-Reg.ttf");
+        typeface8i = Typeface.createFromAsset(c.getAssets(), "fonts/Lato-RegIta.ttf");
+        typeface9 = Typeface.createFromAsset(c.getAssets(), "fonts/LeagueGothic-Regular.otf");
+        typeface9i = Typeface.createFromAsset(c.getAssets(), "fonts/LeagueGothic-Italic.otf");
+        typeface10 = Typeface.createFromAsset(c.getAssets(), "fonts/Roboto-Light.ttf");
+        typeface10i = Typeface.createFromAsset(c.getAssets(), "fonts/Roboto-LightItalic.ttf");
+        typeface11 = Typeface.createFromAsset(c.getAssets(), "fonts/Roboto-Thin.ttf");
+        typeface11i = Typeface.createFromAsset(c.getAssets(), "fonts/Roboto-ThinItalic.ttf");
+        typeface12 = Typeface.createFromAsset(c.getAssets(), "fonts/Roboto-Medium.ttf");
+        typeface12i = Typeface.createFromAsset(c.getAssets(), "fonts/Roboto-MediumItalic.ttf");
+    }
+    private void testForNFC(Context c) {
+        mAndroidBeamAvailable = true;
+        try {
+            mNfcAdapter = NfcAdapter.getDefaultAdapter(c);
+        } catch (Exception e) {
+            mAndroidBeamAvailable = false;
+        }
+        if (mNfcAdapter==null) {
+            mAndroidBeamAvailable = false;
+        }
+    }
+
+
+    // Just for the popups - let StageMode or PresenterMode try to deal with them
+    @Override
+    public void onSongImportDone(String message) {
+        Log.d("d","onSongImportDone() called from FullscreenActivity");
+    }
+    @Override
+    public void refreshAll() {
+        Log.d("d","refreshAll called from FullscreenActivity");
+    }
+
+
+
+
+    //TODO
+    /*
+    Need to figure out what happens when an appropriate file gets clicked
+    if (getIntent() != null) {
+        dealWithIntent(getIntent());
+
+
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        dealWithIntent(intent);
+    }
+
+
+    /*
 @SuppressWarnings("deprecation")
 @SuppressLint({"DefaultLocale", "RtlHardcoded", "InflateParams", "SdCardPath"})
 public class FullscreenActivity extends AppCompatActivity implements PopUpImportExportOSBFragment.MyInterface,
         PopUpImportExternalFile.MyInterface {
+*/
 
-    //First up, declare all of the variables needed by this application
+
+/*
+    private void dealWithIntent(Context c, Intent intent) {
+        try {
+            if (intent != null) {
+                if (intent.getData() != null && intent.getData().getPath() != null) {
+                    file_location = intent.getData().getPath();
+                    */
+/*filechosen = new File(intent.getData().getPath());*//*
+
+                    file_name = intent.getData().getLastPathSegment();
+                }
+                file_uri = intent.getData();
+                String action = intent.getAction();
+                String type = intent.getType();
+
+                if (Intent.ACTION_SEND.equals(action) && type != null) {
+                    if ("text/plain".equals(type)) {
+                        handleSendText(c, intent); // Handle text being sent
+                    } */
+/*else if (type.startsWith("image/")) {
+                        handleSendImage(intent); // Handle single image being sent
+                    }*//*
+
+                }
+
+                if (file_name != null && file_location != null) {
+                    // Check the file exists!
+                    DocumentFile f = DocumentFile.fromSingleUri(c,file_uri);
+                    if (f.exists() && f.canRead()) {
+                        FullscreenActivity.incomingfile = intent;
+                        if (file_name.endsWith(".osb")) {
+                            // This is an OpenSong backup file
+                            whattodo = "importfile_processimportosb";
+                        } else {
+                            // This is an file opensong can deal with (hopefully)
+                            whattodo = "importfile_doimport";
+                        }
+                    } else {
+                        // Cancel the intent
+                        FullscreenActivity.incomingfile = null;
+                    }
+                }
+
+            }
+        } catch (Exception e) {
+            // No file or intent data
+            e.printStackTrace();
+            // Just open the app
+            // Clear the current intent data as we've dealt with it
+            FullscreenActivity.incomingfile = null;
+            FullscreenActivity.myToastMessage = c.getString(R.string.error);
+
+        }
+    }
+*/
+
+/*
+    private void handleSendText(Context c, Intent intent) {
+        StringBuilder sharedText = new StringBuilder(intent.getStringExtra(Intent.EXTRA_TEXT));
+        String title;
+        // Fix line breaks (if they exist)
+        sharedText = new StringBuilder(ProcessSong.fixlinebreaks(sharedText.toString()));
+
+        // If this is imported from YouVersion bible app, it should contain https://bible
+        if (sharedText.toString().contains("https://bible")) {
+
+            title = c.getString(R.string.scripture);
+            // Split the text into lines
+            String[] lines = sharedText.toString().split("\n");
+            if (lines.length>0) {
+                // Remove the last line (http reference)
+                if (lines.length-1>0 && lines[lines.length-1]!=null &&
+                        lines[lines.length-1].contains("https://bible")) {
+                    lines[lines.length-1] = "";
+                }
+
+                // The 2nd last line is likely to be the verse title
+                if (lines.length-2>0 && lines[lines.length-2]!=null) {
+                    title = lines[lines.length-2];
+                    lines[lines.length-2] = "";
+                }
+
+                // Now put the string back together.
+                sharedText = new StringBuilder();
+                for (String l:lines) {
+                    sharedText.append(l).append("\n");
+                }
+                sharedText = new StringBuilder(sharedText.toString().trim());
+            }
+
+            // Now split it into smaller lines to better fit the screen size
+            sharedText = new StringBuilder(Bible.shortenTheLines(sharedText.toString(), 40, 6));
+
+            whattodo = "importfile_customreusable_scripture";
+            scripture_title = title;
+            scripture_verse = sharedText.toString();
+        } else {
+            // Just standard text, so create a new song
+            whattodo = "importfile_newsong_text";
+            scripture_title = "importedtext_in_scripture_verse";
+            scripture_verse = sharedText.toString();
+        }
+    }
+*/
+
+    public static void restart(Context context) {
+        Intent mStartActivity = new Intent(context, BootUpCheck.class);
+        int mPendingIntentId = 123456;
+        PendingIntent mPendingIntent = PendingIntent.getActivity(context, mPendingIntentId, mStartActivity,
+                PendingIntent.FLAG_CANCEL_CURRENT);
+        AlarmManager mgr = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (mgr != null) {
+            mgr.set(AlarmManager.RTC, System.currentTimeMillis() + 100, mPendingIntent);
+        }
+        Log.d("d","Something is wrong, trying to restart");
+        System.exit(0);
+    }
+
+    @Override
+    public void openFragment() {
+        Log.d("d","openFragment() called from FullscreenActivity");
+    }
+
+    @Override
+    public void backupInstall(String m) {
+        Log.d("d","backupInstall() called from FullscreenActivity");
+    }
+
+
+
+
+
+
+    // BELOW THIS MESSAGE IS ALL OF THE STATIC VARIABLES TO BE USED!
+
 
     // The important starting up ones
     public static Locale locale;
-    public static boolean resetSomePreferences, firstload = true;
+    public static boolean firstload = true;
     public static int currentapiVersion;
 
     // Storage variables
     public static String mediaStore = "", prefStorage, customStorage, mStorage = "";
     public static Uri uriTree;
-    public static boolean useStorageAcessFramework, searchUsingSAF=false;
-    public static File root = Environment.getExternalStorageDirectory(),
-            homedir = new File(root.getAbsolutePath() + "/documents/OpenSong"),
-            dir = new File(root.getAbsolutePath() + "/documents/OpenSong/Songs"),
-            dirsettings = new File(root.getAbsolutePath() + "/documents/OpenSong/Settings"),
-            dironsong = new File(root.getAbsolutePath() + "/documents/OpenSong/Songs/OnSong"),
-            dirsets = new File(root.getAbsolutePath() + "/documents/OpenSong/Sets"),
-            direxport = new File(root.getAbsolutePath() + "/documents/OpenSong/Export"),
-            dirPads = new File(root.getAbsolutePath() + "/documents/OpenSong/Pads"),
-            dirMedia = new File(root.getAbsolutePath() + "/documents/OpenSong/Media"),
-            dirbackgrounds = new File(root.getAbsolutePath() + "/documents/OpenSong/Backgrounds"),
-            dirbibles = new File(root.getAbsolutePath() + "/documents/OpenSong/OpenSong Scripture"),
-            dirbibleverses = new File(root.getAbsolutePath() + "/documents/OpenSong/OpenSong Scripture/_cache"),
-            dirscripture = new File(root.getAbsolutePath() + "/documents/OpenSong/Scripture/"),
-            dirscriptureverses = new File(root.getAbsolutePath() + "/documents/OpenSong/Scripture/_cache"),
-            dircustomslides = new File(root.getAbsolutePath() + "/documents/OpenSong/Slides/_cache"),
-            dircustomnotes = new File(root.getAbsolutePath() + "/documents/OpenSong/Notes/_cache"),
-            dircustomimages = new File(root.getAbsolutePath() + "/documents/OpenSong/Images/_cache"),
-            dirvariations = new File(root.getAbsolutePath() + "/documents/OpenSong/Variations"),
-            dirprofiles = new File(root.getAbsolutePath() + "/documents/OpenSong/Profiles"),
-            dirreceived = new File(root.getAbsolutePath() + "/documents/OpenSong/Received"),
-            dirhighlighter = new File(root.getAbsolutePath() + "/documents/OpenSong/Highlighter"),
-            dirfonts = new File(root.getAbsolutePath() + "/documents/OpenSong/Fonts");
 
     // The song fields
     public static CharSequence mTitle = "", mAuthor = "Gareth Evans", mCopyright = "";
@@ -102,8 +365,10 @@ public class FullscreenActivity extends AppCompatActivity implements PopUpImport
             searchKey = new ArrayList<>(), searchHymnNumber = new ArrayList<>(),
             allfilesforsearch = new ArrayList<>(), search_database = new ArrayList<>();
     public static float menuSize, alphabeticalSize;
-    public static File filechosen, file;
+    public static DocumentFile filechosen, file;
     public static String[] mSongFileNames, mSongFolderNames;
+    public static ArrayList<String> allSongs, allSongFolders;
+    public static ArrayList<Uri> currentSongsInFoldersUris;
 
     //instantiated new class here.
     public static SongFileList songfilelist = new SongFileList();
@@ -177,12 +442,12 @@ public class FullscreenActivity extends AppCompatActivity implements PopUpImport
             settoload = "", setMoveDirection = "", mySetXML = "", setnamechosen = "",
             lastLoadedSetContent = "";
     public static String[] mySetsFileNames, mySetsFolderNames, mSet, mSetList, myParsedSet;
-    public static File[] mySetsFiles, mySetsDirectories;
+    /*public static File[] mySetsFiles, mySetsDirectories;*/
     public static boolean setView, showingSetsToLoad = false, doneshuffle = false,
             addingtoset = false;
     public static int setSize, indexSongInSet;
     public static ArrayList<String> mTempSetList;
-    public static File setfile;
+    public static DocumentFile setfile;
 
     // Chords, capo and transpose stuff
     public static String prefChord_Aflat_Gsharp = "", prefChord_Bflat_Asharp = "",
@@ -232,9 +497,10 @@ public class FullscreenActivity extends AppCompatActivity implements PopUpImport
     public static String filetoselect = "", pagebutton_scale, profile;
 
     // This is for trying to automatically open songs via intent
-    public static Intent incomingfile;
+    //private static Intent incomingfile;
     public static String file_name = "", file_location = "", file_type = "", file_contents = "";
     public static Uri file_uri;
+    public static boolean stayinsameclass;
 
     // Screencapure variables
     public static Bitmap bmScreen;
@@ -344,12 +610,6 @@ public class FullscreenActivity extends AppCompatActivity implements PopUpImport
     public static float commentfontscalesize, headingfontscalesize, chordfontscalesize,
             stickyOpacity, stickyTextSize;
 
-    // Page turner
-    //This has now been superceded
-   /* public static int pageturner_NEXT, pageturner_PREVIOUS, pageturner_UP, pageturner_DOWN,
-            pageturner_PAD, pageturner_AUTOSCROLL, pageturner_METRONOME, pageturner_AUTOSCROLLPAD,
-            pageturner_AUTOSCROLLMETRONOME, pageturner_PADMETRONOME, pageturner_AUTOSCROLLPADMETRONOME,
-            pageturner_;*/
 
     public static int pedal1, pedal2, pedal3, pedal4, pedal5, pedal6;
     public static String pedal1shortaction, pedal2shortaction, pedal3shortaction, pedal4shortaction,
@@ -409,7 +669,7 @@ public class FullscreenActivity extends AppCompatActivity implements PopUpImport
     public static String toggleYScale = "", thissong_scale;
     public static String myXML = "", mynewXML = "";
     public static String songfilename = "", linkclicked = "";
-    public static SharedPreferences myPreferences;
+    static SharedPreferences myPreferences;
     public static int numrowstowrite;
     public static String[] myParsedLyrics, myTransposedLyrics;
 
@@ -463,315 +723,4 @@ public class FullscreenActivity extends AppCompatActivity implements PopUpImport
     // Flag to indicate that Android Beam is available
     public static boolean mAndroidBeamAvailable  = false;
     public static boolean forcecastupdate;
-
-    //public static RefWatcher refWatcher;
-
-
-    // Just for the popups - let StageMode or PresenterMode try to deal with them
-    // @Override
-    public void refreshAll() {
-        Log.d("d","refreshAll() called from FullscreenActivity");
-    }
-
-    @Override
-    public void onSongImportDone(String message) {
-        Log.d("d","onSongImportDone() called from FullscreenActivity");
-    }
-
-    @Override
-    public void backupInstall(String message) {
-        Log.d("d","backupInstall() called from FullscreenActivity");
-    }
-
-    @Override
-    public void openFragment() {
-        Log.d("d","openFragment() called from FullscreenActivity");
-    }
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-//        if (LeakCanary.isInAnalyzerProcess(this.getApplication())) {
-//            // This process is dedicated to LeakCanary for heap analysis.
-//            // You should not init your app in this process.
-//            return;
-//        }
-//        refWatcher = LeakCanary.install(this.getApplication());
-        myPreferences = getSharedPreferences("OpenSongApp", Context.MODE_PRIVATE);
-
-        // If we have an intent or a whattodo starting with importfile, retain this
-
-        if (getIntent()!=null) {
-            dealWithIntent(getIntent());
-        }
-
-
-        if (whattodo==null) {
-            whattodo = "";
-        }
-
-        // Load up the preferences
-        Preferences.loadPreferences();
-
-        // To get here from the SettingsActivity, we only needed to check for basic folders existing
-        // Now lets check properly for all of the stuff we need, and if it is missing, create them
-        if (!PopUpStorageFragment.checkDirectoriesExistOnly()) {
-            PopUpStorageFragment.createDirectories();
-        }
-
-        if (resetSomePreferences) {
-            FullscreenActivity.longpressdownpedalgesture = "0";
-            FullscreenActivity.longpressuppedalgesture = "0";
-            FullscreenActivity.longpressnextpedalgesture = "0";
-            FullscreenActivity.longpresspreviouspedalgesture = "0";
-            FullscreenActivity.gesture_doubletap = "2";
-            FullscreenActivity.gesture_longpress = "3";
-            Preferences.savePreferences();
-            resetSomePreferences = false;
-        }
-
-        mainfoldername = getResources().getString(R.string.mainfoldername);
-
-        // If the song was loaded last time correctly, then we are good to continue
-        // If it didn't load, then reset the starting song and folder
-        if (!Preferences.wasSongLoaded()) {
-            whichSongFolder = "";
-            songfilename = "Welcome to OpenSongApp";
-        }
-
-        // If whichSongFolder is empty, reset to main
-        if (whichSongFolder == null || whichSongFolder.isEmpty() || whichSongFolder.equals("")) {
-            whichSongFolder = mainfoldername;
-            Preferences.savePreferences();
-        }
-        locale = Locale.getDefault();
-        if  (locale==null) {
-            locale = new Locale(Locale.getDefault().getDisplayLanguage());
-        }
-
-        if (!locale.toString().equals("af") && !locale.toString().equals("cz") && !locale.toString().equals("de") &&
-                !locale.toString().equals("el") && !locale.toString().equals("es") && !locale.toString().equals("fr") &&
-                !locale.toString().equals("hu") && !locale.toString().equals("it") && !locale.toString().equals("ja") &&
-                !locale.toString().equals("pl") && !locale.toString().equals("pt") && !locale.toString().equals("ru") &&
-                !locale.toString().equals("sr") && !locale.toString().equals("zh")) {
-            locale = new Locale("en");
-        }
-
-        // Get the song folders
-        ListSongFiles.getAllSongFolders();
-
-        // Try language locale change
-        if (!languageToLoad.isEmpty()) {
-            locale = new Locale(languageToLoad);
-            Locale.setDefault(locale);
-            Configuration config = new Configuration();
-            config.locale = locale;
-            getBaseContext().getResources().updateConfiguration(config,
-                    getBaseContext().getResources().getDisplayMetrics());
-        }
-
-        timesigs = getResources().getStringArray(R.array.timesig);
-
-        mainfoldername = getResources().getString(R.string.mainfoldername);
-
-
-        // Test for NFC capability
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            mAndroidBeamAvailable = false;
-        } else {
-            mAndroidBeamAvailable = true;
-            try {
-                mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
-            } catch (Exception e) {
-                mAndroidBeamAvailable = false;
-            }
-            if (mNfcAdapter==null) {
-                mAndroidBeamAvailable = false;
-            }
-        }
-
-        // Initialise api
-        currentapiVersion = Build.VERSION.SDK_INT;
-
-        // Capable of dual head presentations
-        dualDisplayCapable = currentapiVersion >= 17;
-
-        // Set up the available typefaces
-        // Initialise the typefaces available
-        typeface0 = Typeface.DEFAULT;
-        typeface1 = Typeface.MONOSPACE;
-        typeface2 = Typeface.SANS_SERIF;
-        typeface3 = Typeface.SERIF;
-        typeface4 = Typeface.createFromAsset(getAssets(), "fonts/FiraSansOT-Light.otf");
-        typeface4i = Typeface.createFromAsset(getAssets(), "fonts/FiraSans-LightItalic.otf");
-        typeface5 = Typeface.createFromAsset(getAssets(), "fonts/FiraSansOT-Regular.otf");
-        typeface5i = Typeface.createFromAsset(getAssets(), "fonts/FiraSans-Italic.otf");
-        typeface6 = Typeface.createFromAsset(getAssets(), "fonts/KaushanScript-Regular.otf");
-        typeface7 = Typeface.createFromAsset(getAssets(), "fonts/Lato-Lig.ttf");
-        typeface7i = Typeface.createFromAsset(getAssets(), "fonts/Lato-LigIta.ttf");
-        typeface8 = Typeface.createFromAsset(getAssets(), "fonts/Lato-Reg.ttf");
-        typeface8i = Typeface.createFromAsset(getAssets(), "fonts/Lato-RegIta.ttf");
-        typeface9 = Typeface.createFromAsset(getAssets(), "fonts/LeagueGothic-Regular.otf");
-        typeface9i = Typeface.createFromAsset(getAssets(), "fonts/LeagueGothic-Italic.otf");
-        typeface10 = Typeface.createFromAsset(getAssets(), "fonts/Roboto-Light.ttf");
-        typeface10i = Typeface.createFromAsset(getAssets(), "fonts/Roboto-LightItalic.ttf");
-        typeface11 = Typeface.createFromAsset(getAssets(), "fonts/Roboto-Thin.ttf");
-        typeface11i = Typeface.createFromAsset(getAssets(), "fonts/Roboto-ThinItalic.ttf");
-        typeface12 = Typeface.createFromAsset(getAssets(), "fonts/Roboto-Medium.ttf");
-        typeface12i = Typeface.createFromAsset(getAssets(), "fonts/Roboto-MediumItalic.ttf");
-
-        // Set up the user preferences for page colours and fonts
-        SetUpColours.colours();
-        SetTypeFace.setTypeface();
-
-        // Copy assets (background images)
-        PopUpStorageFragment.copyAssets(FullscreenActivity.this);
-
-        // Prepare import varaibale
-        // Copy the default files into the image folder (from assets)
-
-
-        // If whichMode is Presentation, open that app instead
-        switch (whichMode) {
-            case "Presentation":
-                Intent performmode = new Intent();
-                performmode.setClass(FullscreenActivity.this, PresenterMode.class);
-                startActivity(performmode);
-                finish();
-                break;
-            case "Stage": {
-                Intent stagemode = new Intent();
-                stagemode.setClass(FullscreenActivity.this, StageMode.class);
-                startActivity(stagemode);
-                finish();
-                break;
-            }
-            case "Performance":
-            default: {
-                Intent stagemode = new Intent();
-                stagemode.setClass(FullscreenActivity.this, StageMode.class);
-                startActivity(stagemode);
-                finish();
-                break;
-            }
-        }
-
-        finish();
-    }
-
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        dealWithIntent(intent);
-    }
-
-    public void dealWithIntent(Intent intent) {
-        try {
-            if (intent != null) {
-                if (intent.getData() != null && intent.getData().getPath() != null) {
-                    file_location = intent.getData().getPath();
-                    filechosen = new File(intent.getData().getPath());
-                    file_name = intent.getData().getLastPathSegment();
-                }
-                file_uri = intent.getData();
-                String action = intent.getAction();
-                String type = intent.getType();
-
-                if (Intent.ACTION_SEND.equals(action) && type != null) {
-                    if ("text/plain".equals(type)) {
-                        handleSendText(intent); // Handle text being sent
-                    } /*else if (type.startsWith("image/")) {
-                        handleSendImage(intent); // Handle single image being sent
-                    }*/
-                }
-
-                if (file_name != null && file_location != null) {
-                    // Check the file exists!
-                    File f = new File(file_location);
-                    if (f.exists() && f.canRead()) {
-                        FullscreenActivity.incomingfile = intent;
-                        if (file_name.endsWith(".osb")) {
-                            // This is an OpenSong backup file
-                            whattodo = "importfile_processimportosb";
-                        } else {
-                            // This is an file opensong can deal with (hopefully)
-                            whattodo = "importfile_doimport";
-                        }
-                    } else {
-                        // Cancel the intent
-                        FullscreenActivity.incomingfile = null;
-                    }
-                }
-
-            }
-        } catch (Exception e) {
-            // No file or intent data
-            e.printStackTrace();
-            // Just open the app
-            // Clear the current intent data as we've dealt with it
-            FullscreenActivity.incomingfile = null;
-            FullscreenActivity.myToastMessage = getString(R.string.error);
-
-        }
-    }
-
-    public void handleSendText(Intent intent) {
-        String sharedText = intent.getStringExtra(Intent.EXTRA_TEXT);
-        String title;
-        if (sharedText != null) {
-            // Fix line breaks (if they exist)
-            sharedText = ProcessSong.fixlinebreaks(sharedText);
-
-            // If this is imported from YouVersion bible app, it should contain https://bible
-            if (sharedText.contains("https://bible")) {
-
-                title = getString(R.string.scripture);
-                // Split the text into lines
-                String[] lines = sharedText.split("\n");
-                if (lines.length>0) {
-                    // Remove the last line (http reference)
-                    if (lines.length-1>0 && lines[lines.length-1]!=null &&
-                            lines[lines.length-1].contains("https://bible")) {
-                        lines[lines.length-1] = "";
-                    }
-
-                    // The 2nd last line is likely to be the verse title
-                    if (lines.length-2>0 && lines[lines.length-2]!=null) {
-                        title = lines[lines.length-2];
-                        lines[lines.length-2] = "";
-                    }
-
-                    // Now put the string back together.
-                    sharedText = "";
-                    for (String l:lines) {
-                        sharedText = sharedText + l + "\n";
-                    }
-                    sharedText = sharedText.trim();
-                }
-
-                // Now split it into smaller lines to better fit the screen size
-                sharedText = Bible.shortenTheLines(sharedText, 40, 6);
-
-                whattodo = "importfile_customreusable_scripture";
-                scripture_title = title;
-                scripture_verse = sharedText;
-            } else {
-                // Just standard text, so create a new song
-                whattodo = "importfile_newsong_text";
-                scripture_title = "importedtext_in_scripture_verse";
-                scripture_verse = sharedText;
-            }
-        }
-    }
-
-
-    public static void restart(Context context) {
-        Intent mStartActivity = new Intent(context, SettingsActivity.class);
-        int mPendingIntentId = 123456;
-        PendingIntent mPendingIntent = PendingIntent.getActivity(context, mPendingIntentId, mStartActivity,
-                PendingIntent.FLAG_CANCEL_CURRENT);
-        AlarmManager mgr = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        mgr.set(AlarmManager.RTC, System.currentTimeMillis() + 100, mPendingIntent);
-        System.exit(0);
-    }
-}
+ }

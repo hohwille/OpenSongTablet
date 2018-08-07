@@ -257,7 +257,7 @@ public class PopUpChordsFragment extends DialogFragment {
             String tempallchords = FullscreenActivity.allchords;
             FullscreenActivity.mCustomChords = FullscreenActivity.mCustomChords.trim();
             String[] tempCustomChordsArray = FullscreenActivity.mCustomChords.split(" ");
-            String tempCustomChordsToAdd = "";
+            StringBuilder tempCustomChordsToAdd = new StringBuilder();
             int numcustomchords;
 
             if (tempCustomChordsArray.length > 0) {
@@ -269,7 +269,7 @@ public class PopUpChordsFragment extends DialogFragment {
                             (FullscreenActivity.chordInstrument.equals("b") && tempCustomChordsArray[q] != null && tempCustomChordsArray[q].contains("_b_")) ||
                             (FullscreenActivity.chordInstrument.equals("B") && tempCustomChordsArray[q] != null && tempCustomChordsArray[q].contains("_B_")) ||
                             (FullscreenActivity.chordInstrument.equals("g") && tempCustomChordsArray[q] != null && tempCustomChordsArray[q].contains("_g_"))) {
-                        tempCustomChordsToAdd = tempCustomChordsToAdd + " $$$" + tempCustomChordsArray[q];
+                        tempCustomChordsToAdd.append(" $$$").append(tempCustomChordsArray[q]);
                     }
                 }
             }

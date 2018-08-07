@@ -81,58 +81,60 @@ class SearchViewAdapter extends BaseAdapter implements Filterable, SectionIndexe
         LayoutInflater mInflater = (LayoutInflater) context
                 .getSystemService(Activity.LAYOUT_INFLATER_SERVICE);
 
-        convertView = mInflater.inflate(R.layout.searchrow, null);
-        TextView file_tv = convertView.findViewById(R.id.cardview_filename);
-        TextView name_tv = convertView.findViewById(R.id.cardview_songtitle);
-        TextView folder_tv = convertView.findViewById(R.id.cardview_folder);
-        TextView text_key = convertView.findViewById(R.id.text_key);
-        TextView author_tv = convertView.findViewById(R.id.cardview_author);
-        TextView key_tv = convertView.findViewById(R.id.cardview_key);
-        TextView text_author = convertView.findViewById(R.id.text_author);
-        TextView theme_tv = convertView.findViewById(R.id.cardview_theme);
-        TextView lyrics_tv = convertView.findViewById(R.id.cardview_lyrics);
-        TextView hymnnum_tv = convertView.findViewById(R.id.cardview_hymn);
+        if (mInflater != null) {
+            convertView = mInflater.inflate(R.layout.searchrow, null);
+            TextView file_tv = convertView.findViewById(R.id.cardview_filename);
+            TextView name_tv = convertView.findViewById(R.id.cardview_songtitle);
+            TextView folder_tv = convertView.findViewById(R.id.cardview_folder);
+            TextView text_key = convertView.findViewById(R.id.text_key);
+            TextView author_tv = convertView.findViewById(R.id.cardview_author);
+            TextView key_tv = convertView.findViewById(R.id.cardview_key);
+            TextView text_author = convertView.findViewById(R.id.text_author);
+            TextView theme_tv = convertView.findViewById(R.id.cardview_theme);
+            TextView lyrics_tv = convertView.findViewById(R.id.cardview_lyrics);
+            TextView hymnnum_tv = convertView.findViewById(R.id.cardview_hymn);
 
-        SearchViewItems song = searchlist.get(position);
+            SearchViewItems song = searchlist.get(position);
 
-        if (what.equals("songmenu")) {
-            name_tv.setTextSize(16.0f);
-            name_tv.setText(song.getTitle());
+            if (what.equals("songmenu")) {
+                name_tv.setTextSize(16.0f);
+                name_tv.setText(song.getTitle());
 
-            author_tv.setText(song.getAuthor());
-            author_tv.setTextSize(10.0f);
+                author_tv.setText(song.getAuthor());
+                author_tv.setTextSize(10.0f);
 
-            folder_tv.setVisibility(View.GONE);
-            text_author.setVisibility(View.GONE);
-            key_tv.setVisibility(View.GONE);
-            text_key.setVisibility(View.GONE);
-
-        } else {
-            file_tv.setText(song.getFilename());
-            name_tv.setText(song.getTitle());
-            folder_tv.setText(song.getFolder());
-            author_tv.setText(song.getAuthor());
-            key_tv.setText(song.getKey());
-            theme_tv.setText(song.getTheme());
-            lyrics_tv.setText(song.getLyrics());
-            hymnnum_tv.setText(song.getHymnnum());
-
-            // Hide the empty stuff
-            if (song.getAuthor().equals("")) {
+                folder_tv.setVisibility(View.GONE);
                 text_author.setVisibility(View.GONE);
-                author_tv.setVisibility(View.GONE);
-            } else {
-                text_author.setVisibility(View.VISIBLE);
-                author_tv.setVisibility(View.VISIBLE);
-            }
-            if (song.getKey().equals("")) {
-                text_key.setVisibility(View.GONE);
                 key_tv.setVisibility(View.GONE);
-            } else {
-                text_key.setVisibility(View.VISIBLE);
-                key_tv.setVisibility(View.VISIBLE);
-            }
+                text_key.setVisibility(View.GONE);
 
+            } else {
+                file_tv.setText(song.getFilename());
+                name_tv.setText(song.getTitle());
+                folder_tv.setText(song.getFolder());
+                author_tv.setText(song.getAuthor());
+                key_tv.setText(song.getKey());
+                theme_tv.setText(song.getTheme());
+                lyrics_tv.setText(song.getLyrics());
+                hymnnum_tv.setText(song.getHymnnum());
+
+                // Hide the empty stuff
+                if (song.getAuthor().equals("")) {
+                    text_author.setVisibility(View.GONE);
+                    author_tv.setVisibility(View.GONE);
+                } else {
+                    text_author.setVisibility(View.VISIBLE);
+                    author_tv.setVisibility(View.VISIBLE);
+                }
+                if (song.getKey().equals("")) {
+                    text_key.setVisibility(View.GONE);
+                    key_tv.setVisibility(View.GONE);
+                } else {
+                    text_key.setVisibility(View.VISIBLE);
+                    key_tv.setVisibility(View.VISIBLE);
+                }
+
+            }
         }
         return convertView;
     }

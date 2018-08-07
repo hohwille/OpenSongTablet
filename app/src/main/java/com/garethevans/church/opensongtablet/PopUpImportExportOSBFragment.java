@@ -7,6 +7,7 @@ import android.content.DialogInterface;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.provider.DocumentFile;
 import android.support.v7.widget.SwitchCompat;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,10 +21,8 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -83,6 +82,13 @@ public class PopUpImportExportOSBFragment extends DialogFragment {
     FloatingActionButton saveMe;
     SwitchCompat overwrite;
 
+    // Helper classes
+    ExportPreparer exportPreparer;
+    StorageAccess storageAccess;
+
+    // Storage
+    DocumentFile homeFolder;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
 
@@ -95,6 +101,11 @@ public class PopUpImportExportOSBFragment extends DialogFragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        exportPreparer = new ExportPreparer();
+        storageAccess = new StorageAccess();
+
+        homeFolder = storageAccess.getHomeFolder(getActivity());
+
         // Decide if we are importing or exporting
         if (FullscreenActivity.whattodo.equals("processimportosb")) {
             mTitle = getActivity().getResources().getString(R.string.backup_import);
@@ -211,8 +222,8 @@ public class PopUpImportExportOSBFragment extends DialogFragment {
     }
     public void doTheExporting() {
         // Get a note of the folders chosen and add them to a string
-        ExportPreparer.folderstoexport = selectednote;
-        ExportPreparer.createSelectedOSB(getActivity());
+        exportPreparer.folderstoexport = selectednote;
+        exportPreparer.createSelectedOSB(getActivity(), homeFolder);
     }
 
     public void prepareFolderListImport() {
@@ -228,8 +239,10 @@ public class PopUpImportExportOSBFragment extends DialogFragment {
         protected String doInBackground(String... strings) {
             ZipInputStream zis = null;
             foldersfoundinzip = new ArrayList<>();
+            StorageAccess sa = new StorageAccess();
             try {
-                zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(FullscreenActivity.filechosen)));
+                InputStream is = sa.getInputStreamFromUri(getActivity(),FullscreenActivity.filechosen.getUri());
+                zis = new ZipInputStream(new BufferedInputStream(is));
                 ZipEntry ze;
                 while ((ze = zis.getNextEntry()) != null) {
                     if (ze.toString().contains("/")) {
@@ -306,12 +319,15 @@ public class PopUpImportExportOSBFragment extends DialogFragment {
         ShowToast.showToast(getActivity());
         // Check the selected folders
         selectednote = "";
+        StringBuilder sn = new StringBuilder();
         for (int i=0; i<foldersfoundinzip.size(); i++) {
             if (folderlist.isItemChecked(i)) {
-                selectednote = selectednote + "%__" + foldersfoundinzip.get(i) + "/__%";
+                sn.append("%__");
+                sn.append(foldersfoundinzip.get(i));
+                sn.append("/__%");
             }
         }
-
+        selectednote = sn.toString();
         // Split
         foldersselectedtoimport = selectednote.split("__%%__");
         for (int i=0; i<foldersselectedtoimport.length; i++) {
@@ -338,7 +354,9 @@ public class PopUpImportExportOSBFragment extends DialogFragment {
 
             ZipInputStream zis = null;
             try {
-                zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(FullscreenActivity.filechosen)));
+                StorageAccess sa = new StorageAccess();
+                InputStream is = sa.getInputStreamFromUri(getActivity(),FullscreenActivity.filechosen.getUri());
+                zis = new ZipInputStream(new BufferedInputStream(is));
                 ZipEntry ze;
                 int count;
                 byte[] buffer = new byte[8192];
@@ -356,17 +374,15 @@ public class PopUpImportExportOSBFragment extends DialogFragment {
                     }
 
                     if (oktoimportthisone) {
-                        File file = new File(FullscreenActivity.dir, ze.getName());
-                        File dir = ze.isDirectory() ? file : file.getParentFile();
-                        if (!dir.isDirectory() && !dir.mkdirs()) {
-                            throw new FileNotFoundException("Failed to ensure directory: " +
-                                    dir.getAbsolutePath());
+                        DocumentFile file = sa.getFileLocationAsDocumentFile(getActivity(),homeFolder,"Songs", "",
+                                ze.getName());
+                        // If this is a directory, check it exists in our Songs folder, if not, create it
+                        if (ze.isDirectory() && !file.exists()) {
+                            sa.tryCreateDirectory(getActivity(),homeFolder,"Songs",ze.getName());
                         }
-                        if (ze.isDirectory()) {
-                            continue;
-                        }
+
                         if (!file.exists() || (file.exists() && canoverwrite)) {
-                            FileOutputStream fout = new FileOutputStream(file);
+                            OutputStream fout = sa.getOutputStreamFromUri(getActivity(),file.getUri());
                             try {
                                 while ((count = zis.read(buffer)) != -1)
                                     fout.write(buffer, 0, count);

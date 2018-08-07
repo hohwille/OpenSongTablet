@@ -1,13 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.garethevans.church.opensongtablet"
-    xmlns:tools="http://schemas.android.com/tools"
     android:versionCode="150"
     android:versionName="4.2.8"
     android:installLocation="auto">
 
-    <!--Overrides are for Sdk=12/13 but library specifiesv Sdk=14+-->
+
     <uses-sdk
-        android:minSdkVersion="14" android:targetSdkVersion="26"
+        android:minSdkVersion="21" android:targetSdkVersion="28"/>
+<!--    &lt;!&ndash;Overrides are for Sdk=12/13 but library specifiesv Sdk=14+&ndash;&gt;
+    <uses-sdk
+        android:minSdkVersion="21" android:targetSdkVersion="26"
         tools:overrideLibrary="
         com.google.android.gms,
         com.google.android.gms.nearby,
@@ -22,7 +24,9 @@
         com.google.android.gms.common.license,
         com.google.android.gms.cast.license,
         com.google.android.gms.tasks.license"
-        tools:ignore="OldTargetApi" />
+        tools:ignore="OldTargetApi" />-->
+
+
 
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
@@ -30,18 +34,18 @@
     <uses-feature android:name="android.software.midi" android:required="false"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.VIBRATE"/>
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE"/>
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.BLUETOOTH"/>
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-    <uses-permission android:name="android.permission.CAMERA"/>
-    <uses-permission android:name="android.permission.NFC"/>
+    <uses-permission android:name="android.permission.INTERNET" android:required="false"/>
+    <uses-permission android:name="android.permission.VIBRATE" android:required="false"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" android:required="false"/>
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" android:required="false"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" android:required="false"/>
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" android:required="false"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO" android:required="false" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:required="false"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:required="false"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:required="false"/>
+    <uses-permission android:name="android.permission.CAMERA" android:required="false"/>
+    <uses-permission android:name="android.permission.NFC" android:required="false"/>
 
     <application
         android:fullBackupContent="true"
@@ -88,7 +92,7 @@
                 android:value="com.garethevans.church.opensongtablet.CastOptionsProvider" />
 
 
-        <activity
+        <!--<activity
             android:name="com.garethevans.church.opensongtablet.SettingsActivity"
             android:configChanges="orientation|keyboard|keyboardHidden|screenSize"
             android:label="@string/app_name" >
@@ -100,10 +104,10 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".BootUpCheck" />
+        <activity android:name=".BootUpCheck" />-->
 
-        <!--//This is used for testing Storage Access Framework BootUpCheck
-                <activity android:name=".SettingsActivity" />
+
+                <!--<activity android:name=".SettingsActivity" />-->
 
                 <activity android:name=".BootUpCheck"
                     android:configChanges="orientation|keyboard|keyboardHidden|screenSize"
@@ -115,13 +119,14 @@
                         <category android:name="android.intent.category.LAUNCHER" />
                     </intent-filter>
                 </activity>
-        -->
 
+
+<!--
         <activity
             android:name="com.garethevans.church.opensongtablet.FullscreenActivity"
             android:configChanges="orientation|keyboard|keyboardHidden|screenSize"
             android:label="@string/app_name">
-            <!--plaintext filter-->
+            &lt;!&ndash;plaintext filter&ndash;&gt;
             <intent-filter
                 android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
@@ -130,7 +135,7 @@
                     <category android:name="android.intent.category.DEFAULT"/>
                     <data android:mimeType="text/plain"/>
             </intent-filter>
-            <!--xmlapplication filter-->
+            &lt;!&ndash;xmlapplication filter&ndash;&gt;
             <intent-filter android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
                 android:roundIcon="@mipmap/ic_round_launcher">
@@ -140,7 +145,7 @@
                 <data android:host="*" />
                 <data android:mimeType="application/xml" />
             </intent-filter>
-            <!--txtapplication filter-->
+            &lt;!&ndash;txtapplication filter&ndash;&gt;
             <intent-filter android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
                 android:roundIcon="@mipmap/ic_round_launcher">
@@ -150,7 +155,7 @@
                 <data android:host="*" />
                 <data android:mimeType="application/txt" />
             </intent-filter>
-            <!--xml filter-->
+            &lt;!&ndash;xml filter&ndash;&gt;
             <intent-filter android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
                 android:roundIcon="@mipmap/ic_round_launcher">
@@ -160,7 +165,7 @@
                 <data android:host="*" />
                 <data android:mimeType="application/xhtml+xml" />
             </intent-filter>
-            <!--stream filter-->
+            &lt;!&ndash;stream filter&ndash;&gt;
             <intent-filter android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
                 android:roundIcon="@mipmap/ic_round_launcher"
@@ -170,7 +175,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:mimeType="application/octet-stream" />
             </intent-filter>
-            <!--osb filter-->
+            &lt;!&ndash;osb filter&ndash;&gt;
             <intent-filter android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
                 android:roundIcon="@mipmap/ic_round_launcher">
@@ -185,7 +190,7 @@
                 <data android:pathPattern="/.*\\..*\\..*\\..*\\.osb"/>
                 <data android:host="*" />
             </intent-filter>
-            <!--ost filter-->
+            &lt;!&ndash;ost filter&ndash;&gt;
             <intent-filter android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
                 android:roundIcon="@mipmap/ic_round_launcher">
@@ -200,7 +205,7 @@
                 <data android:pathPattern="/.*\\..*\\..*\\..*\\.ost"/>
                 <data android:host="*" />
             </intent-filter>
-            <!--onsong filter-->
+            &lt;!&ndash;onsong filter&ndash;&gt;
             <intent-filter android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
                 android:roundIcon="@mipmap/ic_round_launcher">
@@ -215,7 +220,7 @@
                 <data android:pathPattern="/.*\\..*\\..*\\..*\\.onsong"/>
                 <data android:host="*" />
             </intent-filter>
-            <!--backup filter-->
+            &lt;!&ndash;backup filter&ndash;&gt;
             <intent-filter android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
                 android:roundIcon="@mipmap/ic_round_launcher">
@@ -230,7 +235,7 @@
                 <data android:pathPattern="/.*\\..*\\..*\\..*\\.backup"/>
                 <data android:host="*" />
             </intent-filter>
-            <!--osts filter-->
+            &lt;!&ndash;osts filter&ndash;&gt;
             <intent-filter android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
                 android:roundIcon="@mipmap/ic_round_launcher">
@@ -245,7 +250,7 @@
                 <data android:pathPattern="/.*\\..*\\..*\\..*\\.osts"/>
                 <data android:host="*" />
             </intent-filter>
-            <!--chordpro filter-->
+            &lt;!&ndash;chordpro filter&ndash;&gt;
             <intent-filter android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
                 android:roundIcon="@mipmap/ic_round_launcher">
@@ -288,7 +293,7 @@
                 <data android:pathPattern="/.*\\..*\\..*\\..*\\.CHORDPRO"/>
                 <data android:host="*" />
             </intent-filter>
-            <!--txt filter-->
+            &lt;!&ndash;txt filter&ndash;&gt;
             <intent-filter android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
                 android:roundIcon="@mipmap/ic_round_launcher">
@@ -307,7 +312,7 @@
                 <data android:pathPattern="/.*\\..*\\..*\\..*\\.TXT"/>
                 <data android:host="*" />
             </intent-filter>
-            <!--usr filter-->
+            &lt;!&ndash;usr filter&ndash;&gt;
             <intent-filter android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
                 android:roundIcon="@mipmap/ic_round_launcher">
@@ -326,7 +331,7 @@
                 <data android:pathPattern="/.*\\..*\\..*\\..*\\.USR"/>
                 <data android:host="*" />
             </intent-filter>
-            <!--pdf filter-->
+            &lt;!&ndash;pdf filter&ndash;&gt;
             <intent-filter
                 android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
@@ -343,7 +348,7 @@
                 <data android:pathPattern="/.*\\..*\\.PDF" />
                 <data android:pathPattern="/.*\\..*\\..*\\.PDF" />
             </intent-filter>
-            <!--png filter-->
+            &lt;!&ndash;png filter&ndash;&gt;
             <intent-filter
                 android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
@@ -360,7 +365,7 @@
                 <data android:pathPattern="/.*\\..*\\.PNG" />
                 <data android:pathPattern="/.*\\..*\\..*\\.PNG" />
             </intent-filter>
-            <!--jpg filter-->
+            &lt;!&ndash;jpg filter&ndash;&gt;
             <intent-filter
                 android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
@@ -377,7 +382,7 @@
                 <data android:pathPattern="/.*\\..*\\.JPG" />
                 <data android:pathPattern="/.*\\..*\\..*\\.JPG" />
             </intent-filter>
-            <!--jpeg filter-->
+            &lt;!&ndash;jpeg filter&ndash;&gt;
             <intent-filter
                 android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
@@ -394,7 +399,7 @@
                 <data android:pathPattern="/.*\\..*\\.JPEG" />
                 <data android:pathPattern="/.*\\..*\\..*\\.JPEG" />
             </intent-filter>
-            <!--gif filter-->
+            &lt;!&ndash;gif filter&ndash;&gt;
             <intent-filter
                 android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
@@ -412,6 +417,7 @@
                 <data android:pathPattern="/.*\\..*\\..*\\.GIF" />
             </intent-filter>
         </activity>
+-->
 
         <activity
             android:name="com.garethevans.church.opensongtablet.PresenterMode"
@@ -429,10 +435,7 @@
             <!--android:launchMode="singleTask"-->
         </activity>
         <activity android:name=".IndexSongs" />
-        <activity android:name=".Preferences" />
-        <activity android:name=".LoadXML" />
         <activity android:name=".CreateNewSet" />
-        <activity android:name=".ExportPreparer" />
         <activity android:name=".OptionMenuListeners" />
         <activity android:name=".ProcessSong" />
         <activity android:name=".SetActions" />

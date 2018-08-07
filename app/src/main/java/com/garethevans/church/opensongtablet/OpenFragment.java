@@ -226,7 +226,7 @@ class OpenFragment {
                 break;
 
             case "managestorage":
-                newFragment = PopUpStorageFragment.newInstance();
+                //newFragment = PopUpStorageFragment.newInstance();
                 break;
 
             case "findstoragelocation":

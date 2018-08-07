@@ -1,3 +1,4 @@
+/*
 package com.garethevans.church.opensongtablet;
 
 import android.Manifest;
@@ -28,8 +29,10 @@ import android.widget.TextView;
 import java.io.File;
 import java.util.Arrays;
 
-public class SettingsActivity extends AppCompatActivity implements PopUpStorageFragment.SettingsInterface,
-PopUpDirectoryChooserFragment.SettingsInterface, PopUpFindStorageLocationFragment.MyInterface {
+public class SettingsActivity extends AppCompatActivity implements */
+/*PopUpStorageFragment.SettingsInterface,
+PopUpDirectoryChooserFragment.SettingsInterface,*//*
+ PopUpFindStorageLocationFragment.MyInterface {
 
     // This class covers the splash screen and main settings page
     // Users then have the option to move into the FullscreenActivity
@@ -135,9 +138,11 @@ PopUpDirectoryChooserFragment.SettingsInterface, PopUpFindStorageLocationFragmen
                 break;
         }
 
-        PopUpStorageFragment.getOtherFolders(myroot);
+        */
+/*PopUpStorageFragment.getOtherFolders(myroot);
         final boolean storageexists = PopUpStorageFragment.checkBasicDirectoriesExistOnly();
-        PopUpStorageFragment.wipeExportFolder();
+        PopUpStorageFragment.wipeExportFolder();*//*
+
 
         delayfadeinredraw = new Handler();
         delayfadeinredraw.postDelayed(new Runnable() {
@@ -422,4 +427,4 @@ PopUpDirectoryChooserFragment.SettingsInterface, PopUpFindStorageLocationFragmen
     public void openFragment() {
         selectStorage();
     }
-}
+}*/

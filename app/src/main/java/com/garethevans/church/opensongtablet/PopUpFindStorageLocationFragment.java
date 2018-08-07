@@ -94,7 +94,7 @@ public class PopUpFindStorageLocationFragment extends DialogFragment {
                 public void onClick(View view) {
                     CustomAnimations.animateFAB(saveMe, getActivity());
                     saveMe.setEnabled(false);
-                    saveStorageLocation();
+                    //saveStorageLocation();
                     reopenStorageChooser();
                 }
             });
@@ -233,7 +233,7 @@ public class PopUpFindStorageLocationFragment extends DialogFragment {
         }
     }
 
-    public void saveStorageLocation() {
+/*    public void saveStorageLocation() {
         // Save the storage location, then reopen the storage chooser
         String mydefault = Environment.getExternalStorageDirectory() + "/documents";
         if (nothingchosen || chosen.equals(getString(R.string.nofound))) {
@@ -249,7 +249,7 @@ public class PopUpFindStorageLocationFragment extends DialogFragment {
             FullscreenActivity.customStorage = chosen;
             Preferences.savePreferences();
         }
-    }
+    }*/
 
     public void reopenStorageChooser() {
         if (mListener!=null) {
